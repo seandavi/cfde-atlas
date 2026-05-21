@@ -66,7 +66,7 @@ export async function renderPdf(ctx: ExportContext): Promise<Blob> {
       tableHeader: { bold: true, fillColor: "#f3f1ea" },
       provenance: { italics: true, color: "#6b6e74", fontSize: 9 },
       chartTitle: { bold: true, margin: [0, 6, 0, 4] },
-      mono: { font: "Courier", fontSize: 9.5 },
+      mono: { fontSize: 9.5 },
     },
     content,
   };
