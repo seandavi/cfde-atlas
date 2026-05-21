@@ -1,26 +1,102 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* cfde-atlas palette
+ *
+ * Goal: feels like a serious internal NIH tool — calm, content-first,
+ * trustworthy. Not corporate-blue, not federal-bureaucracy, not
+ * hackathon-demo.
+ *
+ * Background is warm off-white (parchment-ish) in light, deep slate
+ * in dark. Accent is a desaturated indigo — academic, restrained,
+ * legible on both backgrounds. Borders are intentionally low-contrast
+ * so the eye lands on content, not chrome.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  --background: #faf9f4;
+  --surface: #ffffff;
+  --surface-muted: #f3f1ea;
+  --foreground: #1a1c20;
+  --foreground-muted: #6b6e74;
+  --foreground-faint: #9a9da3;
+  --border: #e6e2d6;
+  --border-strong: #d4cfbf;
+  --accent: #5763a5;
+  --accent-fg: #ffffff;
+  --accent-soft: #dde1f0;
+  --accent-soft-fg: #2f386b;
+  --danger: #b3261e;
+  --danger-soft: #fbeae9;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0e0f12;
+    --surface: #161820;
+    --surface-muted: #1c1f28;
+    --foreground: #e8e6e0;
+    --foreground-muted: #9da0a8;
+    --foreground-faint: #6b6e76;
+    --border: #232631;
+    --border-strong: #2f3340;
+    --accent: #8b95cf;
+    --accent-fg: #0e0f12;
+    --accent-soft: #1f2237;
+    --accent-soft-fg: #b8c0e6;
+    --danger: #f2807a;
+    --danger-soft: #2a1816;
   }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-faint: var(--foreground-faint);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-fg: var(--accent-soft-fg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* A subtle, slow pulse for the in-flight tool indicator. */
+@keyframes cfde-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+.cfde-pulse {
+  animation: cfde-pulse 1.4s ease-in-out infinite;
+}
+
+/* Slight fade-in when new content streams in. */
+@keyframes cfde-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.cfde-fade-in {
+  animation: cfde-fade-in 240ms ease-out both;
 }
