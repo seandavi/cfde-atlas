@@ -100,9 +100,17 @@ const render_chart = tool({
       ),
   }),
   execute: async ({ title, spec }) => {
+    const validation = validateVegaLiteSpec(spec);
+    if (!validation.ok) {
+      return {
+        error: validation.reason,
+        hint: "Re-emit the spec with data inline in spec.data.values as a non-empty array of row objects. Field names in spec.encoding must match keys in the row objects.",
+      };
+    }
     return {
       title,
       vega_lite_spec: spec,
+      row_count: validation.rowCount,
       _notice: MOCK_NOTICE,
     };
   },
@@ -114,6 +122,101 @@ export const cfdeTools = {
   run_query,
   render_chart,
 };
+
+// ---------- Vega-Lite spec validator ----------
+
+type VegaValidationOk = { ok: true; rowCount: number };
+type VegaValidationErr = { ok: false; reason: string };
+
+export function validateVegaLiteSpec(
+  spec: unknown,
+): VegaValidationOk | VegaValidationErr {
+  if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
+    return { ok: false, reason: "spec must be a JSON object." };
+  }
+  const s = spec as Record<string, unknown>;
+
+  // Reject the Gemini key-mangling pathology: literal keys like `"data"`
+  // with embedded quotes. If we see one, the rest of the spec is also
+  // mangled — fast-fail with a specific hint.
+  for (const key of Object.keys(s)) {
+    if (key.includes('"')) {
+      return {
+        ok: false,
+        reason: `Property keys contain literal quote characters (saw "${key}"). Emit the spec as a plain JSON object — do not stringify or escape the keys.`,
+      };
+    }
+  }
+
+  if (!("mark" in s) && !("layer" in s) && !("hconcat" in s) && !("vconcat" in s) && !("facet" in s)) {
+    return {
+      ok: false,
+      reason: "spec must declare a chart shape via one of: mark, layer, hconcat, vconcat, facet.",
+    };
+  }
+
+  const data = s.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return {
+      ok: false,
+      reason: "spec.data must be an object with a non-empty values array.",
+    };
+  }
+  const d = data as Record<string, unknown>;
+
+  if ("url" in d) {
+    return {
+      ok: false,
+      reason: "spec.data.url is not supported. Inline the rows in spec.data.values instead.",
+    };
+  }
+
+  const values = d.values;
+  if (!Array.isArray(values)) {
+    return {
+      ok: false,
+      reason: "spec.data.values must be an array of row objects.",
+    };
+  }
+  if (values.length === 0) {
+    return {
+      ok: false,
+      reason: "spec.data.values is empty. Aggregate or top-N your run_query result and include the rows you want to plot.",
+    };
+  }
+  for (let i = 0; i < values.length; i++) {
+    const row = values[i];
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      return {
+        ok: false,
+        reason: `spec.data.values[${i}] must be an object; got ${Array.isArray(row) ? "array" : typeof row}.`,
+      };
+    }
+  }
+
+  // If encoding declares field references, ensure each referenced field
+  // appears as a key in at least one row — catches "I called the field
+  // 'funding' but my rows use 'amount'" mismatches.
+  const encoding = s.encoding;
+  if (encoding && typeof encoding === "object" && !Array.isArray(encoding)) {
+    const rowKeys = new Set<string>();
+    for (const row of values as Record<string, unknown>[]) {
+      for (const k of Object.keys(row)) rowKeys.add(k);
+    }
+    for (const channel of Object.values(encoding as Record<string, unknown>)) {
+      if (!channel || typeof channel !== "object") continue;
+      const field = (channel as Record<string, unknown>).field;
+      if (typeof field === "string" && !rowKeys.has(field)) {
+        return {
+          ok: false,
+          reason: `Encoding references field "${field}" but no row in spec.data.values has that key. Row keys present: ${[...rowKeys].join(", ")}.`,
+        };
+      }
+    }
+  }
+
+  return { ok: true, rowCount: values.length };
+}
 
 // ---------- SQL guard helpers ----------
 
