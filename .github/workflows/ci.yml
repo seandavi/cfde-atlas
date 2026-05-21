@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test -- --reporter=verbose
+
+      - name: Build
+        # The build step is the slowest and the most likely to surface real
+        # regressions (Next.js bundler issues, client/server boundary errors).
+        # Putting it last means a failure here is contextualized by passing
+        # type-check + lint + test, which makes the error easier to read.
+        run: npm run build
+        env:
+          # Make sure the build never expects a live API key — the chat
+          # handler reads it at request time, not build time.
+          GOOGLE_GENERATIVE_AI_API_KEY: ci-noop
