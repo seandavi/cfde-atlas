@@ -152,37 +152,41 @@ function ToolCallPart({ part }: { part: ToolPart }) {
     part.type === "dynamic-tool"
       ? part.toolName
       : part.type.replace(/^tool-/, "");
-  return (
-    <details className="my-2 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40 text-xs">
-      <summary className="cursor-pointer px-2 py-1.5 font-mono text-zinc-600 dark:text-zinc-400">
-        <span className="text-zinc-400">tool · </span>
-        <span className="text-zinc-700 dark:text-zinc-200">{toolName}</span>
-        <span className="text-zinc-400"> · {part.state}</span>
-      </summary>
-      <div className="px-2 pb-2 flex flex-col gap-2">
-        {"input" in part && part.input !== undefined && (
-          <PreBlock label="input" value={part.input} />
+
+  const chart =
+    toolName === "render_chart" &&
+    part.state === "output-available" &&
+    isChartOutput(part.output) ? (
+      <div className="my-3 rounded border border-zinc-200 dark:border-zinc-800 p-3 bg-white dark:bg-zinc-950">
+        {part.output.title && (
+          <div className="text-xs font-medium mb-2">{part.output.title}</div>
         )}
-        {part.state === "output-available" && "output" in part && (
-          <PreBlock label="output" value={part.output} />
-        )}
-        {part.state === "output-error" && "errorText" in part && (
-          <PreBlock label="error" value={part.errorText} />
-        )}
-        {toolName === "render_chart" &&
-          part.state === "output-available" &&
-          isChartOutput(part.output) && (
-            <div className="rounded border border-zinc-200 dark:border-zinc-800 p-2 bg-white dark:bg-zinc-950">
-              {part.output.title && (
-                <div className="text-xs font-medium mb-2">
-                  {part.output.title}
-                </div>
-              )}
-              <VegaChart spec={part.output.vega_lite_spec} />
-            </div>
-          )}
+        <VegaChart spec={part.output.vega_lite_spec} />
       </div>
-    </details>
+    ) : null;
+
+  return (
+    <>
+      {chart}
+      <details className="my-2 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40 text-xs">
+        <summary className="cursor-pointer px-2 py-1.5 font-mono text-zinc-600 dark:text-zinc-400">
+          <span className="text-zinc-400">tool · </span>
+          <span className="text-zinc-700 dark:text-zinc-200">{toolName}</span>
+          <span className="text-zinc-400"> · {part.state}</span>
+        </summary>
+        <div className="px-2 pb-2 flex flex-col gap-2">
+          {"input" in part && part.input !== undefined && (
+            <PreBlock label="input" value={part.input} />
+          )}
+          {part.state === "output-available" && "output" in part && (
+            <PreBlock label="output" value={part.output} />
+          )}
+          {part.state === "output-error" && "errorText" in part && (
+            <PreBlock label="error" value={part.errorText} />
+          )}
+        </div>
+      </details>
+    </>
   );
 }
 

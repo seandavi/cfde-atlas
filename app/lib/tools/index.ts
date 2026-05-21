@@ -86,12 +86,17 @@ const run_query = tool({
 const render_chart = tool({
   description:
     "Produce a figure from a Vega-Lite spec. Pass a valid Vega-Lite v5 spec. Use this when the user asks for a chart or when a chart clarifies a numeric story. Always surface the underlying table alongside the figure.",
+  // NOTE: spec is intentionally typed `unknown` (not z.record / z.object).
+  // Gemini's tool-arg generation mangles keys ("\"data\"" instead of "data")
+  // when given a z.record(...) schema converted through Google's OpenAPI shape.
+  // unknown means "any JSON" with no per-property schema, which Gemini handles
+  // correctly and lets Vega-Lite specs round-trip.
   inputSchema: z.object({
     title: z.string().describe("Short human-readable title for the figure."),
     spec: z
-      .record(z.string(), z.unknown())
+      .unknown()
       .describe(
-        "Vega-Lite v5 spec object. Include data.values inline; do not reference external URLs.",
+        "Vega-Lite v5 spec object (any valid VL spec). Include data.values inline; do not reference external URLs.",
       ),
   }),
   execute: async ({ title, spec }) => {
