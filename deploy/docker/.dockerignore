@@ -1,0 +1,46 @@
+# Keep the build context small and avoid leaking host-only files into
+# the image. Anything not listed here is included in `docker build`.
+
+# Build outputs & dependencies (rebuilt inside the image)
+node_modules
+.next
+out
+dist
+
+# Local env files. .env.example is fine to ship; real secrets are never
+# baked into the image — they come from the compose env at runtime.
+.env
+.env.*.local
+.env.local
+
+# VCS, editor, OS
+.git
+.gitignore
+.github
+.vscode
+.idea
+.DS_Store
+
+# Tests, docs, agent-only files — not needed at runtime
+**/__tests__
+**/*.test.*
+**/*.spec.*
+coverage
+docs
+AGENTS.md
+CLAUDE.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+LICENSE
+README.md
+BLUEPRINT.md
+vitest.config.ts
+
+# Other deploy targets — don't bake the Cloudflare build into the
+# Docker image (and vice versa)
+deploy/cloudflare
+
+# Logs / scratch
+*.log
+.npm
+.eslintcache
