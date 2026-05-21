@@ -8,8 +8,16 @@ import {
   type ToolUIPart,
 } from "ai";
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+const VegaChart = dynamic(() => import("./components/VegaChart"), {
+  ssr: false,
+  loading: () => (
+    <div className="text-xs text-zinc-500 italic">Loading chart…</div>
+  ),
+});
 
 const EXAMPLE_PROMPTS = [
   "What tables do you have?",
@@ -164,12 +172,14 @@ function ToolCallPart({ part }: { part: ToolPart }) {
         {toolName === "render_chart" &&
           part.state === "output-available" &&
           isChartOutput(part.output) && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={part.output.image_url}
-              alt={part.output.title}
-              className="rounded border border-zinc-200 dark:border-zinc-800"
-            />
+            <div className="rounded border border-zinc-200 dark:border-zinc-800 p-2 bg-white dark:bg-zinc-950">
+              {part.output.title && (
+                <div className="text-xs font-medium mb-2">
+                  {part.output.title}
+                </div>
+              )}
+              <VegaChart spec={part.output.vega_lite_spec} />
+            </div>
           )}
       </div>
     </details>
@@ -272,8 +282,12 @@ function MarkdownText({ text }: { text: string }) {
 
 function isChartOutput(
   value: unknown,
-): value is { image_url: string; title: string } {
+): value is { vega_lite_spec: unknown; title?: string } {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
-  return typeof v.image_url === "string" && typeof v.title === "string";
+  return (
+    "vega_lite_spec" in v &&
+    typeof v.vega_lite_spec === "object" &&
+    v.vega_lite_spec !== null
+  );
 }

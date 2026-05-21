@@ -95,15 +95,10 @@ const render_chart = tool({
       ),
   }),
   execute: async ({ title, spec }) => {
-    const placeholder = `https://placehold.co/720x420/png?text=${encodeURIComponent(
-      title,
-    )}`;
     return {
       title,
       vega_lite_spec: spec,
-      image_url: placeholder,
-      _notice:
-        "Chart rendering is stubbed — image_url is a placeholder. The vega_lite_spec round-trips and will render once the client-side renderer is wired.",
+      _notice: MOCK_NOTICE,
     };
   },
 });
