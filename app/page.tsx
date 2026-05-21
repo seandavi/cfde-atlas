@@ -21,6 +21,10 @@ const VegaChart = dynamic(() => import("./components/VegaChart"), {
   ),
 });
 
+const ExportBar = dynamic(() => import("./components/ExportBar"), {
+  ssr: false,
+});
+
 const EXAMPLE_PROMPTS = [
   {
     prompt: "What tables do you have?",
@@ -93,6 +97,7 @@ export default function Page() {
               <Message
                 key={m.id}
                 message={m}
+                allMessages={messages}
                 inFlight={busy && i === messages.length - 1}
               />
             ))
@@ -174,15 +179,23 @@ function EmptyState({ onPick }: { onPick: (prompt: string) => void }) {
 
 function Message({
   message,
+  allMessages,
   inFlight,
 }: {
   message: UIMessage;
+  allMessages: readonly UIMessage[];
   inFlight: boolean;
 }) {
   if (message.role === "user") {
     return <UserMessage message={message} />;
   }
-  return <AssistantMessage message={message} inFlight={inFlight} />;
+  return (
+    <AssistantMessage
+      message={message}
+      allMessages={allMessages}
+      inFlight={inFlight}
+    />
+  );
 }
 
 function UserMessage({ message }: { message: UIMessage }) {
@@ -202,12 +215,21 @@ function UserMessage({ message }: { message: UIMessage }) {
 
 function AssistantMessage({
   message,
+  allMessages,
   inFlight,
 }: {
   message: UIMessage;
+  allMessages: readonly UIMessage[];
   inFlight: boolean;
 }) {
   const toolParts = message.parts.filter(isToolUIPart);
+  const hasContent = message.parts.some(
+    (p) =>
+      (p.type === "text" && p.text.trim().length > 0) ||
+      (isToolUIPart(p) &&
+        p.type === "tool-render_chart" &&
+        p.state === "output-available"),
+  );
 
   return (
     <div className="flex flex-col gap-3 cfde-fade-in">
@@ -222,12 +244,14 @@ function AssistantMessage({
           return part.text ? <MarkdownText key={i} text={part.text} /> : null;
         }
         if (isToolUIPart(part)) {
-          // The trail (above) covers the tool calls themselves. The chart
-          // from render_chart is the answer surface, so render it inline.
           return <ChartFromTool key={i} part={part} />;
         }
         return null;
       })}
+
+      {!inFlight && hasContent && (
+        <ExportBar messages={allMessages} message={message} />
+      )}
     </div>
   );
 }
