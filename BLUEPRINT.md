@@ -52,7 +52,7 @@ All tables join on **NIH core project number** (e.g., `U54OD036472`). This is th
 Next.js (App Router)
   ├─ UI: Vercel AI SDK chat surface
   ├─ API routes:
-  │    /api/chat       → @ai-sdk/google → gemini-3.5-flash-preview
+  │    /api/chat       → @ai-sdk/google → gemini-3.5-flash
   │    /api/tools/*    → schema-introspection + query tools (LLM-callable)
   └─ Postgres access via postgres.js (or Drizzle if schema gets complex)
        └─ pg_ducklake escape hatch if analytical workloads emerge
@@ -66,7 +66,7 @@ No separate Python backend. No MCP server. Schema-introspection + query are LLM 
 
 ## Model choice
 
-**Default:** `gemini-3.5-flash-preview` via `@ai-sdk/google`.
+**Default:** `gemini-3.5-flash` via `@ai-sdk/google`.
 
 - 1M token context (room for full schema + worked-example exchanges)
 - Native function calling, structured output, code execution
