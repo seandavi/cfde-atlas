@@ -1,56 +1,68 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { TABLE_NAMES, TABLES, type TableName } from "./mock-data";
 
-const MOCK_NOTICE =
-  "Backend is mocked — values illustrative only, do not cite in NIH briefings.";
+import {
+  describeAnalyticsTable,
+  getDataRefreshedAt,
+  listAnalyticsTables,
+  runSelect,
+} from "./schema";
+
+async function freshnessNotice(): Promise<string | undefined> {
+  const ts = await getDataRefreshedAt();
+  return ts ? `Data last refreshed at ${ts} (UTC).` : undefined;
+}
 
 const list_tables = tool({
   description:
     "Discover what tables are available. Returns each table's name with a one-line description written for the LLM. Call this first when you do not know the schema.",
   inputSchema: z.object({}),
   execute: async () => {
+    const tables = await listAnalyticsTables();
     return {
-      tables: TABLE_NAMES.map((name) => ({
-        name,
-        description: TABLES[name].description,
+      tables: tables.map((t) => ({
+        name: t.name,
+        kind: t.kind,
+        description: t.description,
       })),
-      _notice: MOCK_NOTICE,
+      _notice: await freshnessNotice(),
     };
   },
 });
 
 const describe_table = tool({
   description:
-    "Inspect the schema for a single table. Returns column names, types, foreign-key annotations, a sample row, and the row count. Trust the foreign-key annotations — they declare which joins are real.",
+    "Inspect the schema for a single table or view. Returns column names, types, per-column notes (including foreign-key annotations), a sample row, and the row count. Trust the foreign-key annotations — they declare which joins are real.",
   inputSchema: z.object({
     name: z
       .string()
       .describe(
-        "Table name from list_tables, e.g. grants, publications, github_activity, ga_pageviews.",
+        "Table or view name from list_tables (e.g. publications). Schema-qualified names like analytics.publications are also accepted.",
       ),
   }),
   execute: async ({ name }) => {
-    if (!isKnownTable(name)) {
+    const t = await describeAnalyticsTable(name);
+    if (!t) {
+      const known = (await listAnalyticsTables()).map((x) => x.name);
       return {
-        error: `Unknown table "${name}". Known tables: ${TABLE_NAMES.join(", ")}.`,
+        error: `Unknown table "${name}". Known tables: ${known.join(", ")}.`,
       };
     }
-    const t = TABLES[name];
     return {
       name: t.name,
+      kind: t.kind,
       description: t.description,
       row_count: t.row_count,
       columns: t.columns,
-      sample_row: t.rows[0],
-      _notice: MOCK_NOTICE,
+      sample_row: t.sample_row,
+      _notice: await freshnessNotice(),
     };
   },
 });
 
 const run_query = tool({
   description:
-    "Execute a SELECT statement against the CFDE evaluation database. SELECT only — INSERT/UPDATE/DELETE/DROP/etc. are rejected by the server. Cap exploratory queries with LIMIT. The current backend returns mocked rows filtered from the FROM table.",
+    "Execute a SELECT statement against the CFDE evaluation database. SELECT only — INSERT/UPDATE/DELETE/DROP/etc. are rejected. Cap exploratory queries with LIMIT. The default search_path is `analytics, public`, so unqualified names like `publications` resolve to `analytics.publications`.",
   inputSchema: z.object({
     sql: z.string().describe("A single SELECT statement."),
   }),
@@ -59,27 +71,18 @@ const run_query = tool({
     if (!guard.ok) {
       return { error: guard.reason, sql };
     }
-
-    const table = guessFromTable(sql);
-    if (!table) {
+    try {
+      const result = await runSelect(sql);
       return {
-        error:
-          "Could not identify a FROM <table> in the query. The mock backend matches one table at a time; rewrite the query to read from a single known table.",
-        known_tables: TABLE_NAMES,
-        sql,
+        rows: result.rows,
+        row_count: result.row_count,
+        truncated: result.truncated,
+        _notice: await freshnessNotice(),
       };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { error: `Query failed: ${message}`, sql };
     }
-
-    const limit = parseLimit(sql) ?? 50;
-    const rows = TABLES[table].rows.slice(0, limit);
-
-    return {
-      rows,
-      row_count: rows.length,
-      truncated: TABLES[table].rows.length > rows.length,
-      from_table: table,
-      _notice: MOCK_NOTICE,
-    };
   },
 });
 
@@ -111,7 +114,6 @@ const render_chart = tool({
       title,
       vega_lite_spec: spec,
       row_count: validation.rowCount,
-      _notice: MOCK_NOTICE,
     };
   },
 });
@@ -220,10 +222,6 @@ export function validateVegaLiteSpec(
 
 // ---------- SQL guard helpers ----------
 
-function isKnownTable(name: string): name is TableName {
-  return (TABLE_NAMES as string[]).includes(name);
-}
-
 function stripSqlComments(sql: string): string {
   // /* ... */ block comments
   let out = sql.replace(/\/\*[\s\S]*?\*\//g, " ");
@@ -284,19 +282,4 @@ export function enforceSelectOnly(sql: string): { ok: true } | { ok: false; reas
   }
 
   return { ok: true };
-}
-
-function guessFromTable(sql: string): TableName | null {
-  const stripped = stripSqlComments(sql);
-  const match = stripped.match(/\bFROM\s+"?([a-zA-Z_][a-zA-Z0-9_]*)"?/i);
-  const candidate = match?.[1];
-  if (candidate && isKnownTable(candidate)) return candidate;
-  return null;
-}
-
-function parseLimit(sql: string): number | null {
-  const m = sql.match(/\bLIMIT\s+(\d+)\b/i);
-  if (!m) return null;
-  const n = Number(m[1]);
-  return Number.isFinite(n) ? n : null;
 }
