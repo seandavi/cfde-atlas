@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 const { getBlobMock, createPdfMock } = vi.hoisted(() => {
   const getBlobMock = vi.fn(async () => new Blob(["pdf"]));
-  const createPdfMock = vi.fn(() => ({ getBlob: getBlobMock }));
+  // The parameter type is declared so `mock.calls[i][0]` has a usable type;
+  // pdfmake's createPdf takes a `TDocumentDefinitions` but the test only
+  // needs to inspect a small subset, so `unknown` is enough.
+  const createPdfMock = vi.fn((_definition: unknown) => ({
+    getBlob: getBlobMock,
+  }));
   return { getBlobMock, createPdfMock };
 });
 
