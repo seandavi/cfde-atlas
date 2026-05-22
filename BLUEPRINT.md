@@ -25,10 +25,10 @@ Ad hoc conversational interface for **NIH program officers** to query CFDE evalu
 
 | Source | Shape | Status |
 |---|---|---|
-| Grant-associated publications (bibliometrics) | NIH RePORTER + PubMed cross-ref; per-pub citation counts, journals, years | ETL exists in `icc-eval-core` |
-| NIH RePORTER grant data | Core project number, PI, mechanism, FY funding, NOFO/RFA | ETL exists |
-| GitHub activity across ~175 repos | Commits, contributors, releases, issues/PRs, languages | ETL exists |
-| Google Analytics across ~20 properties | Page views, unique users, traffic source, session duration | ETL exists |
+| Grant-associated publications (bibliometrics) | NIH RePORTER + PubMed cross-ref; per-pub citation counts, journals, years | **Live**: `analytics.publications` (~400 rows), loaded by `cfde-atlas-etl/flows/publications.py` from `nih-cfde/icc-eval-core` |
+| NIH RePORTER grant data | Core project number, PI, mechanism, FY funding, NOFO/RFA | ETL planned in `cfde-atlas-etl#2` (blocked on upstream data shape) |
+| GitHub activity across ~175 repos | Commits, contributors, releases, issues/PRs, languages | ETL planned in `cfde-atlas-etl#3` (blocked on upstream data) |
+| Google Analytics across ~20 properties | Page views, unique users, traffic source, session duration | ETL planned in `cfde-atlas-etl#4` (blocked on upstream data) |
 | (Optional v1) GitHub repo + core-project-level summaries | LLM-generated synopses, computed against repo + readme + recent activity | Planned |
 
 ### Worth adding (Council of Councils relevance)
@@ -132,7 +132,7 @@ Prompt template lives in `app/lib/prompts/system.ts` (or wherever the AI SDK's c
 - `DATABASE_URL` — Postgres connection string
 - `(future)` `ORCID_CLIENT_ID` + `ORCID_CLIENT_SECRET` if auth lights up
 
-**Backing Postgres:** TBD. Candidates: Cloud SQL (matches Vertex story), Supabase (managed, integrated with Next.js patterns), Neon (cheap, branch-per-PR is useful for dev). Decide before first deploy.
+**Backing Postgres:** plain Postgres 18 on `pg_ducklake_18` (onclappc02), reached via the `pg_ducklake_stack_default` docker bridge. Specifically NOT `pg_duckdb_18` — pg_duckdb's planner hooks would interfere with the LLM-driven `run_query` path. ETL writes via `cfde-atlas-etl`; the app holds a SELECT-only connection pinned to `search_path = analytics, public`.
 
 ---
 
@@ -157,9 +157,11 @@ Prompt template lives in `app/lib/prompts/system.ts` (or wherever the AI SDK's c
 
 ## Open questions
 
-- Which Postgres host? (Cloud SQL / Supabase / Neon)
-- Where does the deployed app live? (`cfde-atlas.cancerdatasci.org` or NIH-hosted?)
 - Does the user-facing audience know how to operate a chatbot, or does the first interaction need a guided tour / example prompts?
 - How fresh does the data need to be? (Council of Councils is annual — daily refresh is overkill; weekly is probably enough.)
+
+Resolved:
+- ~~Which Postgres host?~~ pg_ducklake_18 on onclappc02 (see Architecture).
+- ~~Where does the deployed app live?~~ `cfde-atlas.cancerdatasci.org`, behind the shared Traefik on onclappc02. Wiring in `monode/infrastructure/compose/cfde_atlas/`.
 
 These get answered as we build, not before.

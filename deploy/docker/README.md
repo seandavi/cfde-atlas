@@ -19,10 +19,12 @@ The image is ~200 MB based on `node:22-alpine` + Next.js standalone output. It r
 ```bash
 docker run --rm -it -p 3000:3000 \
   -e GOOGLE_GENERATIVE_AI_API_KEY="…" \
+  -e DATABASE_URL="postgresql://user:pass@host:5432/db" \
   monode/cfde-atlas:local
 ```
 
-Then `curl http://localhost:3000`. Until `DATABASE_URL` is wired (per BLUEPRINT, the chat tools currently run against mocked sample data) no Postgres connection is needed.
+Then `curl http://127.0.0.1:3000/`. `DATABASE_URL` is required — the chat
+tools introspect the `analytics` schema and run SELECTs against it.
 
 ## Run (production, via Traefik)
 
@@ -45,4 +47,4 @@ It expects the `monode/cfde-atlas:local` tag to exist on the host. Build there f
 
 - It is not OpenNext / Cloudflare Workers. That's [`../cloudflare/`](../cloudflare/) — different build process, different runtime.
 - It is not Vercel. Vercel doesn't use Dockerfiles.
-- It does not bake secrets in. `GOOGLE_GENERATIVE_AI_API_KEY` (and any future `DATABASE_URL`) come from the compose env or a `.env` file at runtime, never the image.
+- It does not bake secrets in. `GOOGLE_GENERATIVE_AI_API_KEY` and `DATABASE_URL` come from the compose env or a `.env` file at runtime, never the image.
