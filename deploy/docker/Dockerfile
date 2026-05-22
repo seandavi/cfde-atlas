@@ -38,6 +38,18 @@ RUN npm run build
 FROM node:22-alpine AS runner
 WORKDIR /app
 
+# OCI image labels. The `org.opencontainers.image.source` value is what
+# auto-associates the GHCR package with this GitHub repository (so the
+# package can inherit repo visibility, link to releases, etc.). The CI
+# workflow under .github/workflows/publish-container.yml ALSO sets
+# these via docker/metadata-action, which overrides at build time, but
+# having them in the Dockerfile means local-built images carry the
+# right metadata too.
+LABEL org.opencontainers.image.source="https://github.com/seandavi/cfde-atlas"
+LABEL org.opencontainers.image.description="Conversational interface for CFDE evaluation metrics"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.url="https://cfde-atlas.cancerdatasci.org"
+
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \

@@ -1,0 +1,92 @@
+# Build and publish the cfde-atlas container image to GitHub Container
+# Registry (ghcr.io/seandavi/cfde-atlas).
+#
+# - On push to `main`: builds + pushes with tags `:latest`, `:main`,
+#   `:sha-<short>`. Consumed by `monode/infrastructure` compose.
+# - On git tag `v*.*.*`: also tags `:v1.2.3`, `:1.2`.
+# - On pull_request: builds without pushing (CI verification).
+#
+# Authentication uses the workflow's GITHUB_TOKEN (granted
+# packages:write below). No PAT needed; GHCR accepts GITHUB_TOKEN
+# from within the same repo.
+#
+# Image visibility starts as private. After the first successful
+# push, flip to public in the package settings:
+#   https://github.com/users/seandavi/packages/container/cfde-atlas/settings
+# or via API:
+#   gh api -X PATCH /user/packages/container/cfde-atlas \
+#     -f visibility=public
+# (Requires a PAT with `read:packages` + `delete:packages` scopes for
+# that endpoint to write — the GITHUB_TOKEN can't change visibility.)
+
+name: Publish container image
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+concurrency:
+  # Don't queue up redundant publishes — newest push wins on a branch;
+  # tagged releases each get their own group.
+  group: publish-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata (tags + labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=cfde-atlas
+            org.opencontainers.image.description=Conversational interface for CFDE evaluation metrics
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.url=https://cfde-atlas.cancerdatasci.org
+            org.opencontainers.image.documentation=https://github.com/seandavi/cfde-atlas/blob/main/README.md
+
+      - name: Build (and push on non-PR events)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
