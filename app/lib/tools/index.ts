@@ -30,31 +30,46 @@ const list_tables = tool({
   },
 });
 
+const DESCRIBE_TABLE_MAX = 8;
+
 const describe_table = tool({
   description:
-    "Inspect the schema for a single table or view. Returns column names, types, per-column notes (including foreign-key annotations), a sample row, and the row count. Trust the foreign-key annotations — they declare which joins are real.",
+    "Inspect schemas for one or more tables/views in a single call. Returns each table's columns, types, per-column notes (including foreign-key annotations), a sample row, and row count. Prefer batched calls — pass every table you plan to join in one invocation rather than chaining single-table calls. Trust the foreign-key annotations.",
   inputSchema: z.object({
-    name: z
-      .string()
+    names: z
+      .array(z.string())
+      .min(1)
+      .max(DESCRIBE_TABLE_MAX)
       .describe(
-        "Table or view name from list_tables (e.g. publications). Schema-qualified names like analytics.publications are also accepted.",
+        `Up to ${DESCRIBE_TABLE_MAX} table or view names from list_tables (e.g. ["publications", "github_repos"]). Schema-qualified names like analytics.publications are also accepted.`,
       ),
   }),
-  execute: async ({ name }) => {
-    const t = await describeAnalyticsTable(name);
-    if (!t) {
-      const known = (await listAnalyticsTables()).map((x) => x.name);
-      return {
-        error: `Unknown table "${name}". Known tables: ${known.join(", ")}.`,
-      };
-    }
+  execute: async ({ names }) => {
+    const unique = Array.from(new Set(names));
+    const tables = await Promise.all(
+      unique.map(async (name) => {
+        const t = await describeAnalyticsTable(name);
+        if (!t) {
+          return { name, error: `Unknown table "${name}".` };
+        }
+        return {
+          name: t.name,
+          kind: t.kind,
+          description: t.description,
+          row_count: t.row_count,
+          columns: t.columns,
+          sample_row: t.sample_row,
+        };
+      }),
+    );
+    const anyMissing = tables.some((t) => "error" in t);
     return {
-      name: t.name,
-      kind: t.kind,
-      description: t.description,
-      row_count: t.row_count,
-      columns: t.columns,
-      sample_row: t.sample_row,
+      tables,
+      ...(anyMissing
+        ? {
+            known_tables: (await listAnalyticsTables()).map((x) => x.name),
+          }
+        : {}),
       _notice: await freshnessNotice(),
     };
   },
