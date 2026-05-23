@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "cfde-atlas",
   description:
-    "Conversational interface for NIH program officers exploring CFDE evaluation metrics.",
+    "Conversational interface for exploring CFDE impact and metrics.",
 };
 
 export default function RootLayout({

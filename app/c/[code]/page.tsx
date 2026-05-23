@@ -84,7 +84,9 @@ export default async function SharedConversationPage({
           />
           {!embed && (
             <div className="text-[10px] text-foreground-faint mt-2 text-center">
-              Mocked sample data. Verify against source systems before citing in any briefing.
+              {row.data_refreshed_at_max
+                ? `Data last refreshed ${new Date(row.data_refreshed_at_max).toISOString().slice(0, 10)} (UTC).`
+                : "Data refresh timestamp unavailable."}
             </div>
           )}
         </div>
