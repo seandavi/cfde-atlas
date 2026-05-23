@@ -37,6 +37,25 @@ function extractSessionIdFromCookie(rawCookie: string | undefined): string | nul
   return rawCookie.slice(0, dot);
 }
 
+// Shape of the streamText onFinish event we care about. Captured into
+// a closure so the UI-stream onFinish (which knows the UIMessage id)
+// can stitch it together with the framework-level usage/steps/response.
+type FinishCapture = {
+  finishReason?: string;
+  usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
+  totalUsage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
+  steps?: ReadonlyArray<{ toolCalls?: Array<{ toolName: string }> }>;
+  response?: {
+    messages?: ReadonlyArray<{
+      content?: ReadonlyArray<{ type?: string; text?: string }>;
+    }>;
+  };
+};
+
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
 
@@ -45,6 +64,9 @@ export async function POST(req: Request) {
     cookieStore.get(sessionCookieName())?.value,
   );
   const startedAt = Date.now();
+  // Closure that the UI-stream onFinish reads to stitch the model-level
+  // event (usage, steps, finishReason) with the UI-level UIMessage id.
+  let finishCapture: FinishCapture | null = null;
 
   const result = streamText({
     model: google(MODEL_ID),
@@ -52,35 +74,26 @@ export async function POST(req: Request) {
     messages: await convertToModelMessages(messages),
     tools: cfdeTools,
     stopWhen: stepCountIs(MAX_STEPS),
-    onFinish: async (event) => {
-      const e = event as {
-        finishReason?: string;
-        usage?: {
-          inputTokens?: number;
-          outputTokens?: number;
-          totalTokens?: number;
-        };
-        totalUsage?: {
-          inputTokens?: number;
-          outputTokens?: number;
-          totalTokens?: number;
-        };
-        steps?: ReadonlyArray<{ toolCalls?: Array<{ toolName: string }> }>;
-        response?: {
-          messages?: ReadonlyArray<{
-            id?: string;
-            content?: ReadonlyArray<{ type?: string; text?: string }>;
-          }>;
-        };
-      };
+    // streamText's onFinish does NOT carry the UIMessage id — its
+    // `response.messages[].id` is undefined because AssistantModelMessage
+    // has no id field (only role + content). Capture the event here;
+    // the UI-stream onFinish below has the id and does the write.
+    onFinish: (event) => {
+      finishCapture = event as FinishCapture;
+    },
+  });
+
+  return result.toUIMessageStreamResponse({
+    onFinish: async ({ responseMessage, isAborted }) => {
+      // isAborted → fall through to onError below for the write.
+      if (isAborted) return;
+      const e = finishCapture ?? {};
       const usage = e.totalUsage ?? e.usage ?? {};
       const { perTool, total } = tallyToolCalls(e.steps);
-      const lastMessageId =
-        e.response?.messages?.[e.response.messages.length - 1]?.id ?? null;
       await appendTurnEvent({
         timestamp: new Date().toISOString(),
         session_id: sessionId,
-        message_id: lastMessageId,
+        message_id: responseMessage?.id ?? null,
         client_fingerprint: null,
         model_id: MODEL_ID,
         finish_reason: e.finishReason ?? null,
@@ -95,13 +108,10 @@ export async function POST(req: Request) {
         error: null,
       });
     },
-  });
-
-  return result.toUIMessageStreamResponse({
     onError: (error) => {
-      // Mirror the error into the telemetry stream too. onFinish does
-      // NOT fire when the stream aborts on error, so this path is the
-      // only place an error turn ever gets logged.
+      // Mirror the error into the telemetry stream too. The UI-stream
+      // onFinish does fire on abort but with no message metadata; this
+      // path is what surfaces the error string itself.
       const message =
         error instanceof Error
           ? error.message
