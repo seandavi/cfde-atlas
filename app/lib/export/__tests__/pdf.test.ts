@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 
 const { getBlobMock, createPdfMock } = vi.hoisted(() => {
   const getBlobMock = vi.fn(async () => new Blob(["pdf"]));
-  const createPdfMock = vi.fn(() => ({ getBlob: getBlobMock }));
+  // Typed arg-tuple so `mock.calls[0][0]` resolves to the captured
+  // document definition instead of an empty tuple.
+  const createPdfMock = vi.fn<(definition: unknown) => { getBlob: typeof getBlobMock }>(
+    () => ({ getBlob: getBlobMock }),
+  );
   return { getBlobMock, createPdfMock };
 });
 
