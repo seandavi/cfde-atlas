@@ -6,11 +6,17 @@ import {
 } from "ai";
 import { google } from "@ai-sdk/google";
 
-import { SYSTEM_PROMPT } from "@/app/lib/prompts/system";
+import { buildSystemPrompt } from "@/app/lib/prompts/system";
 import { cfdeTools } from "@/app/lib/tools";
 
 // gemini-3.5-flash per BLUEPRINT §Model choice. Swap is one line.
 const MODEL_ID = "gemini-3.5-flash";
+
+// Step budget covers the explore → query → chart → narrate loop.
+// Was 8; multi-table answers exhausted that before the model could
+// write its closing prose (see #27). The system prompt is built from
+// this same constant so the model knows the envelope it has to plan in.
+const MAX_STEPS = 20;
 
 export const maxDuration = 60;
 
@@ -19,14 +25,10 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: google(MODEL_ID),
-    system: SYSTEM_PROMPT,
+    system: buildSystemPrompt({ maxSteps: MAX_STEPS }),
     messages: await convertToModelMessages(messages),
     tools: cfdeTools,
-    // Step budget covers the explore → query → chart → narrate loop.
-    // Was 8; multi-table answers exhausted that before the model could
-    // write its closing prose (see #27). 20 leaves ample headroom for
-    // describe_table + a few exploratory queries + the final summary.
-    stopWhen: stepCountIs(20),
+    stopWhen: stepCountIs(MAX_STEPS),
   });
 
   return result.toUIMessageStreamResponse({
