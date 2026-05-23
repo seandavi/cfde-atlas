@@ -5,6 +5,8 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { isToolUIPart, type DynamicToolUIPart, type ToolUIPart } from "ai";
 
+import { CopyButton } from "./CopyButton";
+
 const VegaChart = dynamic(() => import("./VegaChart"), {
   ssr: false,
   loading: () => (
@@ -28,26 +30,43 @@ type MermaidProbe = {
   children?: unknown;
 };
 
-function extractMermaidSource(children: unknown): string | null {
+function extractCodeText(raw: unknown): string {
+  if (typeof raw === "string") return raw;
+  if (Array.isArray(raw)) return raw.map(extractCodeText).join("");
+  if (raw && typeof raw === "object") {
+    const node = raw as { props?: { children?: unknown } };
+    if (node.props && "children" in node.props) {
+      return extractCodeText(node.props.children);
+    }
+  }
+  return "";
+}
+
+function findCodeChild(children: unknown):
+  | { className: string | undefined; raw: unknown }
+  | null {
   if (!children || typeof children !== "object") return null;
   const arr = Array.isArray(children) ? children : [children];
   for (const child of arr) {
     if (!child || typeof child !== "object") continue;
-    const node = child as { props?: MermaidProbe; type?: unknown };
-    const probe = node.props;
-    if (!probe) continue;
-    if (typeof probe.className !== "string") continue;
-    if (!/(^|\s)language-mermaid(\s|$)/.test(probe.className)) continue;
-    const raw = probe.children;
-    if (typeof raw === "string") return raw.replace(/\n$/, "");
-    if (Array.isArray(raw)) {
-      const joined = raw
-        .map((r) => (typeof r === "string" ? r : ""))
-        .join("");
-      return joined.replace(/\n$/, "");
-    }
+    const node = child as { props?: MermaidProbe };
+    if (!node.props) continue;
+    return {
+      className:
+        typeof node.props.className === "string"
+          ? node.props.className
+          : undefined,
+      raw: node.props.children,
+    };
   }
   return null;
+}
+
+function extractMermaidSource(children: unknown): string | null {
+  const found = findCodeChild(children);
+  if (!found?.className) return null;
+  if (!/(^|\s)language-mermaid(\s|$)/.test(found.className)) return null;
+  return extractCodeText(found.raw).replace(/\n$/, "");
 }
 
 export type ToolPart = ToolUIPart | DynamicToolUIPart;
@@ -107,10 +126,15 @@ export const markdownComponents: Components = {
   pre: ({ children }) => {
     const src = extractMermaidSource(children);
     if (src) return <Mermaid chart={src} />;
+    const found = findCodeChild(children);
+    const copyText = found ? extractCodeText(found.raw).replace(/\n$/, "") : "";
     return (
-      <pre className="my-2.5 overflow-x-auto rounded-md bg-surface-muted border border-border p-3 text-[12.5px] leading-snug font-mono">
-        {children}
-      </pre>
+      <div className="relative group my-2.5">
+        <pre className="overflow-x-auto rounded-md bg-surface-muted border border-border p-3 text-[12.5px] leading-snug font-mono">
+          {children}
+        </pre>
+        {copyText && <CopyButton text={copyText} />}
+      </div>
     );
   },
   blockquote: ({ children }) => (
