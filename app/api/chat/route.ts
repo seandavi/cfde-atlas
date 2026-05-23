@@ -16,7 +16,7 @@ const MODEL_ID = "gemini-3.5-flash";
 // Was 8; multi-table answers exhausted that before the model could
 // write its closing prose (see #27). The system prompt is built from
 // this same constant so the model knows the envelope it has to plan in.
-const MAX_STEPS = 20;
+const MAX_STEPS = 40;
 
 export const maxDuration = 60;
 
