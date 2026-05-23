@@ -6,20 +6,18 @@ import {
   isToolUIPart,
   type DynamicToolUIPart,
   type ToolUIPart,
+  type UIMessage as SdkUIMessage,
 } from "ai";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import ReactMarkdown, { type Components } from "react-markdown";
-import remarkGfm from "remark-gfm";
 
-const VegaChart = dynamic(() => import("./components/VegaChart"), {
-  ssr: false,
-  loading: () => (
-    <div className="text-xs text-foreground-faint italic px-1 py-2">
-      Loading chart…
-    </div>
-  ),
-});
+import { useChatSession } from "./components/useChatSession";
+import {
+  ChartFromTool,
+  CompletedTrail,
+  MarkdownText,
+  toolNameOf,
+} from "./components/MessageView";
 
 const ExportBar = dynamic(() => import("./components/ExportBar"), {
   ssr: false,
@@ -56,12 +54,24 @@ type Part = UIMessage["parts"][number];
 type ToolPart = ToolUIPart | DynamicToolUIPart;
 
 export default function Page() {
-  const { messages, sendMessage, status, stop, error } = useChat({
+  const { messages, sendMessage, setMessages, status, stop, error } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const busy = status === "submitted" || status === "streaming";
+
+  const onSeedMessages = useCallback(
+    (seeded: unknown[]) => {
+      setMessages(seeded as SdkUIMessage[]);
+    },
+    [setMessages],
+  );
+  const { sessionId, share } = useChatSession({
+    messages,
+    status,
+    onSeedMessages,
+  });
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -82,7 +92,11 @@ export default function Page() {
 
   return (
     <div className="grid h-full grid-rows-[auto_1fr_auto] bg-background text-foreground">
-      <Header />
+      <Header
+        sessionReady={Boolean(sessionId)}
+        canShare={messages.length > 0 && !busy}
+        onShare={share}
+      />
 
       <main
         ref={scrollRef}
@@ -120,7 +134,15 @@ export default function Page() {
 
 /* ---------------- Header ---------------- */
 
-function Header() {
+function Header({
+  sessionReady,
+  canShare,
+  onShare,
+}: {
+  sessionReady: boolean;
+  canShare: boolean;
+  onShare: () => Promise<{ share_url: string }>;
+}) {
   return (
     <header className="border-b border-border bg-background/85 backdrop-blur px-5 py-3">
       <div className="mx-auto w-full max-w-3xl flex items-center justify-between gap-3">
@@ -132,11 +154,75 @@ function Header() {
             CFDE evaluation metrics, conversationally
           </span>
         </div>
-        <span className="text-[10px] uppercase tracking-widest text-foreground-faint">
-          mock backend
-        </span>
+        <ShareButton
+          disabled={!sessionReady || !canShare}
+          onShare={onShare}
+        />
       </div>
     </header>
+  );
+}
+
+function ShareButton({
+  disabled,
+  onShare,
+}: {
+  disabled: boolean;
+  onShare: () => Promise<{ share_url: string }>;
+}) {
+  const [status, setStatus] = useState<"idle" | "working" | "copied" | "error">(
+    "idle",
+  );
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  const click = async () => {
+    if (disabled || status === "working") return;
+    setStatus("working");
+    setErrMsg(null);
+    try {
+      const { share_url } = await onShare();
+      try {
+        if (
+          typeof navigator !== "undefined" &&
+          navigator.clipboard?.writeText
+        ) {
+          await navigator.clipboard.writeText(share_url);
+        }
+      } catch {
+        // Clipboard may be denied — toast still shows the URL.
+      }
+      setStatus("copied");
+      setTimeout(() => setStatus("idle"), 2500);
+    } catch (err) {
+      setStatus("error");
+      setErrMsg(err instanceof Error ? err.message : "share failed");
+      setTimeout(() => setStatus("idle"), 4000);
+    }
+  };
+
+  const label =
+    status === "working"
+      ? "Sharing…"
+      : status === "copied"
+        ? "Link copied"
+        : status === "error"
+          ? errMsg ?? "Share failed"
+          : "Share";
+
+  return (
+    <button
+      type="button"
+      onClick={click}
+      disabled={disabled || status === "working"}
+      title={
+        disabled
+          ? "Send a message first to create a shareable transcript."
+          : "Copy a read-only link to this conversation."
+      }
+      className="text-xs font-medium px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+    >
+      {label}
+    </button>
   );
 }
 
@@ -300,107 +386,6 @@ function DotDotDot() {
   );
 }
 
-function CompletedTrail({ toolParts }: { toolParts: ToolPart[] }) {
-  const count = toolParts.length;
-  return (
-    <details className="group rounded-md border border-border bg-surface-muted text-xs">
-      <summary className="cursor-pointer list-none px-3 py-1.5 flex items-center gap-2 text-foreground-muted hover:text-foreground min-w-0">
-        <Chevron />
-        <span className="shrink-0 whitespace-nowrap">
-          <span className="font-medium text-foreground">{count}</span>{" "}
-          reasoning step{count === 1 ? "" : "s"}
-        </span>
-        <span className="shrink-0 text-foreground-faint">·</span>
-        <span className="font-mono truncate min-w-0 flex-1">
-          {toolParts.map((p) => toolNameOf(p)).join(" → ")}
-        </span>
-      </summary>
-      <div className="px-3 pb-3 pt-1 flex flex-col gap-2 border-t border-border">
-        {toolParts.map((p, i) => (
-          <ToolDetail key={i} part={p} />
-        ))}
-      </div>
-    </details>
-  );
-}
-
-function Chevron() {
-  return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 10 10"
-      className="text-foreground-faint transition-transform group-open:rotate-90"
-      aria-hidden
-    >
-      <path
-        d="M3 1.5 L7 5 L3 8.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ToolDetail({ part }: { part: ToolPart }) {
-  const name = toolNameOf(part);
-  const stateLabel = part.state.replace(/-/g, " ");
-  return (
-    <details className="rounded border border-border bg-surface">
-      <summary className="cursor-pointer list-none px-2.5 py-1.5 font-mono text-[11px] text-foreground-muted hover:text-foreground flex items-center gap-2">
-        <Chevron />
-        <span className="text-foreground">{name}</span>
-        <span className="text-foreground-faint">· {stateLabel}</span>
-      </summary>
-      <div className="px-2.5 pb-2.5 pt-1 flex flex-col gap-2 border-t border-border">
-        {"input" in part && part.input !== undefined && (
-          <PreBlock label="input" value={part.input} />
-        )}
-        {part.state === "output-available" && "output" in part && (
-          <PreBlock label="output" value={part.output} />
-        )}
-        {part.state === "output-error" && "errorText" in part && (
-          <PreBlock label="error" value={part.errorText} />
-        )}
-      </div>
-    </details>
-  );
-}
-
-function PreBlock({ label, value }: { label: string; value: unknown }) {
-  const text =
-    typeof value === "string" ? value : JSON.stringify(value, null, 2);
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-foreground-faint mb-1">
-        {label}
-      </div>
-      <pre className="text-[11px] overflow-x-auto bg-background rounded p-2 leading-snug font-mono text-foreground-muted">
-        {text}
-      </pre>
-    </div>
-  );
-}
-
-function ChartFromTool({ part }: { part: ToolPart }) {
-  if (toolNameOf(part) !== "render_chart") return null;
-  if (part.state !== "output-available") return null;
-  if (!isChartOutput(part.output)) return null;
-  return (
-    <figure className="my-1 rounded-lg border border-border bg-surface p-4">
-      {part.output.title && (
-        <figcaption className="text-sm font-medium mb-3 text-foreground">
-          {part.output.title}
-        </figcaption>
-      )}
-      <VegaChart spec={part.output.vega_lite_spec} />
-    </figure>
-  );
-}
-
 /* ---------------- Composer ---------------- */
 
 function Composer({
@@ -473,109 +458,7 @@ function Composer({
   );
 }
 
-/* ---------------- Markdown ---------------- */
-
-const markdownComponents: Components = {
-  p: ({ children }) => (
-    <p className="my-2.5 first:mt-0 last:mb-0 text-[14.5px] leading-relaxed">
-      {children}
-    </p>
-  ),
-  ul: ({ children }) => (
-    <ul className="list-disc pl-5 my-2 space-y-1 text-[14.5px]">{children}</ul>
-  ),
-  ol: ({ children }) => (
-    <ol className="list-decimal pl-5 my-2 space-y-1 text-[14.5px]">
-      {children}
-    </ol>
-  ),
-  h1: ({ children }) => (
-    <h1 className="text-lg font-semibold mt-4 mb-2 tracking-tight">
-      {children}
-    </h1>
-  ),
-  h2: ({ children }) => (
-    <h2 className="text-base font-semibold mt-4 mb-2 tracking-tight">
-      {children}
-    </h2>
-  ),
-  h3: ({ children }) => (
-    <h3 className="text-sm font-semibold mt-3 mb-1.5 tracking-tight text-foreground">
-      {children}
-    </h3>
-  ),
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent transition-colors"
-    >
-      {children}
-    </a>
-  ),
-  code: ({ className, children }) => {
-    const isBlock = /language-/.test(className ?? "");
-    if (isBlock) {
-      return <code className="font-mono text-[12.5px]">{children}</code>;
-    }
-    return (
-      <code className="font-mono text-[12.5px] rounded bg-surface-muted px-1 py-0.5">
-        {children}
-      </code>
-    );
-  },
-  pre: ({ children }) => (
-    <pre className="my-2.5 overflow-x-auto rounded-md bg-surface-muted border border-border p-3 text-[12.5px] leading-snug font-mono">
-      {children}
-    </pre>
-  ),
-  blockquote: ({ children }) => (
-    <blockquote className="my-2.5 border-l-2 border-accent/40 pl-3 text-foreground-muted italic">
-      {children}
-    </blockquote>
-  ),
-  hr: () => <hr className="my-4 border-border" />,
-  table: ({ children }) => (
-    <div className="my-3 overflow-x-auto rounded-md border border-border">
-      <table className="w-full border-collapse text-[13px]">{children}</table>
-    </div>
-  ),
-  thead: ({ children }) => (
-    <thead className="bg-surface-muted text-foreground-muted text-[11px] uppercase tracking-wider">
-      {children}
-    </thead>
-  ),
-  th: ({ children }) => (
-    <th className="px-3 py-2 text-left font-medium border-b border-border">
-      {children}
-    </th>
-  ),
-  tr: ({ children }) => (
-    <tr className="border-b border-border last:border-b-0">{children}</tr>
-  ),
-  td: ({ children }) => (
-    <td className="px-3 py-2 align-top text-foreground">{children}</td>
-  ),
-};
-
-function MarkdownText({ text }: { text: string }) {
-  return (
-    <div className="text-[14.5px] leading-relaxed text-foreground">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-        {text}
-      </ReactMarkdown>
-    </div>
-  );
-}
-
 /* ---------------- Helpers ---------------- */
-
-function toolNameOf(part: ToolPart): string {
-  return part.type === "dynamic-tool"
-    ? part.toolName
-    : part.type.replace(/^tool-/, "");
-}
 
 function humaneLabel(toolName: string): string {
   return TOOL_LABEL[toolName] ?? `Calling ${toolName}`;
@@ -594,14 +477,3 @@ function activeToolPart(toolParts: ToolPart[]): ToolPart | null {
   return null;
 }
 
-function isChartOutput(
-  value: unknown,
-): value is { vega_lite_spec: unknown; title?: string } {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return (
-    "vega_lite_spec" in v &&
-    typeof v.vega_lite_spec === "object" &&
-    v.vega_lite_spec !== null
-  );
-}
