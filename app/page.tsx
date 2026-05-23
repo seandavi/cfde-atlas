@@ -239,8 +239,8 @@ function EmptyState({ onPick }: { onPick: (prompt: string) => void }) {
         <p className="text-foreground-muted max-w-prose">
           Bibliometrics, grants, GitHub activity, and web traffic across CFDE programs,
           joined on NIH core project number (e.g.{" "}
-          <span className="font-mono text-foreground">U54OD036472</span>). Built for
-          Council of Councils preparation.
+          <span className="font-mono text-foreground">U54OD036472</span>) — a
+          conversational lens on CFDE metrics and impact.
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
