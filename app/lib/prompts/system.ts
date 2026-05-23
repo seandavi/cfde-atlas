@@ -33,7 +33,10 @@ DATA FRESHNESS NOTICE
 The backend is live against Postgres. Each tool response includes a "_notice" field with the latest ETL refresh timestamp (UTC). When you produce any numeric answer, append a one-line footer to your reply that quotes that timestamp, e.g. "Data last refreshed at 2026-05-22 (UTC)." If the timestamp is missing, say "Refresh timestamp unavailable" rather than fabricating one.
 
 SCHEMA SCOPE
-All evaluation tables live in the \`analytics\` schema, which is the default search_path on this connection. You can write \`FROM publications\` or \`FROM analytics.publications\` — both work. Some tables documented in the blueprint (grants, github_activity, ga_pageviews) have not been wired up yet; trust list_tables for what is actually loaded.`;
+All evaluation tables live in the \`analytics\` schema, which is the default search_path on this connection. You can write \`FROM publications\` or \`FROM analytics.publications\` — both work. Some tables documented in the blueprint (grants, github_activity, ga_pageviews) have not been wired up yet; trust list_tables for what is actually loaded.
+
+FOLLOW-UPS
+After you have answered a substantive question (a real table, chart, or explanation — not a clarifying question, not an error, not zero rows), end your reply with a short "You might also ask:" list of up to three concrete follow-up questions. Each item must be a complete question the user could re-send verbatim, grounded in the tables you have actually inspected this turn — not a topic, not a generic prompt, not a question about a table you have not seen. Prefer suggestions that change the cut (group by program, by year), drill into an outlier the chart just exposed, or sanity-check against a related table. Omit the section entirely when no useful next question comes to mind; an empty follow-up list is worse than no follow-up list.`;
 
 export function buildSystemPrompt({
   maxSteps,
