@@ -38,8 +38,8 @@ const EXAMPLE_PROMPTS = [
     hint: "Produces a horizontal bar chart and the underlying table.",
   },
   {
-    prompt: "Which core projects sit behind the bridge2ai data portal repo?",
-    hint: "Resolves a GitHub repo to its NIH core project numbers.",
+    prompt: "How are CFDE publications cited by downstream NIH grants?",
+    hint: "Walks the citation chain from CFDE pubs to derivative funding.",
   },
 ] as const;
 
