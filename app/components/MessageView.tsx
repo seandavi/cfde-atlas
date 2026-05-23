@@ -14,6 +14,42 @@ const VegaChart = dynamic(() => import("./VegaChart"), {
   ),
 });
 
+const Mermaid = dynamic(() => import("./Mermaid"), {
+  ssr: false,
+  loading: () => (
+    <div className="text-xs text-foreground-faint italic px-1 py-2">
+      Loading diagram…
+    </div>
+  ),
+});
+
+type MermaidProbe = {
+  className?: string;
+  children?: unknown;
+};
+
+function extractMermaidSource(children: unknown): string | null {
+  if (!children || typeof children !== "object") return null;
+  const arr = Array.isArray(children) ? children : [children];
+  for (const child of arr) {
+    if (!child || typeof child !== "object") continue;
+    const node = child as { props?: MermaidProbe; type?: unknown };
+    const probe = node.props;
+    if (!probe) continue;
+    if (typeof probe.className !== "string") continue;
+    if (!/(^|\s)language-mermaid(\s|$)/.test(probe.className)) continue;
+    const raw = probe.children;
+    if (typeof raw === "string") return raw.replace(/\n$/, "");
+    if (Array.isArray(raw)) {
+      const joined = raw
+        .map((r) => (typeof r === "string" ? r : ""))
+        .join("");
+      return joined.replace(/\n$/, "");
+    }
+  }
+  return null;
+}
+
 export type ToolPart = ToolUIPart | DynamicToolUIPart;
 
 /* ---------------- Markdown ---------------- */
@@ -68,11 +104,15 @@ export const markdownComponents: Components = {
       </code>
     );
   },
-  pre: ({ children }) => (
-    <pre className="my-2.5 overflow-x-auto rounded-md bg-surface-muted border border-border p-3 text-[12.5px] leading-snug font-mono">
-      {children}
-    </pre>
-  ),
+  pre: ({ children }) => {
+    const src = extractMermaidSource(children);
+    if (src) return <Mermaid chart={src} />;
+    return (
+      <pre className="my-2.5 overflow-x-auto rounded-md bg-surface-muted border border-border p-3 text-[12.5px] leading-snug font-mono">
+        {children}
+      </pre>
+    );
+  },
   blockquote: ({ children }) => (
     <blockquote className="my-2.5 border-l-2 border-accent/40 pl-3 text-foreground-muted italic">
       {children}
