@@ -18,6 +18,7 @@ import {
   MarkdownText,
   toolNameOf,
 } from "./components/MessageView";
+import { FreshnessFooter } from "./components/FreshnessFooter";
 
 const ExportBar = dynamic(() => import("./components/ExportBar"), {
   ssr: false,
@@ -450,9 +451,7 @@ function Composer({
             </button>
           )}
         </form>
-        <div className="text-[10px] text-foreground-faint mt-2 text-center">
-          Mocked sample data. Verify against source systems before citing in any briefing.
-        </div>
+        <FreshnessFooter />
       </div>
     </div>
   );
