@@ -22,7 +22,11 @@ export async function POST(req: Request) {
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
     tools: cfdeTools,
-    stopWhen: stepCountIs(8),
+    // Step budget covers the explore → query → chart → narrate loop.
+    // Was 8; multi-table answers exhausted that before the model could
+    // write its closing prose (see #27). 20 leaves ample headroom for
+    // describe_table + a few exploratory queries + the final summary.
+    stopWhen: stepCountIs(20),
   });
 
   return result.toUIMessageStreamResponse({
