@@ -162,6 +162,6 @@ Prompt template lives in `app/lib/prompts/system.ts` (or wherever the AI SDK's c
 
 Resolved:
 - ~~Which Postgres host?~~ pg_ducklake_18 on onclappc02 (see Architecture).
-- ~~Where does the deployed app live?~~ `cfde-atlas.cancerdatasci.org`, behind the shared Traefik on onclappc02. Wiring in `monode/infrastructure/compose/cfde_atlas/`.
+- ~~Where does the deployed app live?~~ `cfde-atlas.cancerdatasci.org`, behind the shared Traefik on onclappc02. Wiring in `deploy`.
 
 These get answered as we build, not before.
