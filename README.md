@@ -4,6 +4,10 @@
 
 Surfaces the outputs and downstream reach of CFDE-funded work without requiring SQL or notebooks. **The deliverable is not just data, but intelligence and knowledge** — tables, figures, and the synthesis that turns them into answers.
 
+**Live at [cfde-atlas.cancerdatasci.org](https://cfde-atlas.cancerdatasci.org).**
+
+[![cfde-atlas chat surface](public/screenshot.png)](https://cfde-atlas.cancerdatasci.org)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![React 19](https://img.shields.io/badge/React-19-61dafb?logo=react)
