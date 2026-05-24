@@ -19,6 +19,13 @@ import {
   toolNameOf,
 } from "./components/MessageView";
 import { FreshnessFooter } from "./components/FreshnessFooter";
+import {
+  trackAssistantCompleted,
+  trackPromptSent,
+  trackShareCreated,
+  trackStreamAborted,
+  trackToolCalled,
+} from "./lib/analytics";
 
 const ExportBar = dynamic(() => import("./components/ExportBar"), {
   ssr: false,
@@ -87,8 +94,53 @@ export default function Page() {
   const submit = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
+    trackPromptSent({
+      prompt_length: trimmed.length,
+      prompt_word_count: trimmed.split(/\s+/).filter(Boolean).length,
+    });
     sendMessage({ text: trimmed });
     setInput("");
+  };
+
+  // Emit assistant_completed + per-tool tool_called when a streaming turn
+  // resolves. `stop()` flips status to "ready" too, so distinguish via the
+  // ref-tracked previous status to fire stream_aborted only on user stops.
+  const prevStatusRef = useRef<typeof status>(status);
+  const userStoppedRef = useRef(false);
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = status;
+    const justFinished =
+      (prev === "streaming" || prev === "submitted") && status === "ready";
+    if (!justFinished) return;
+    if (userStoppedRef.current) {
+      userStoppedRef.current = false;
+      trackStreamAborted({ reason: "user_stop" });
+      return;
+    }
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant") return;
+    const toolParts = last.parts.filter(isToolUIPart);
+    for (const tp of toolParts) {
+      trackToolCalled({ tool_name: toolNameOf(tp) });
+    }
+    const had_chart = toolParts.some(
+      (p) => p.type === "tool-render_chart" && p.state === "output-available",
+    );
+    const had_table = last.parts.some(
+      (p) => p.type === "text" && /(^|\n)\s*\|.*\|/.test(p.text),
+    );
+    trackAssistantCompleted({
+      step_count: toolParts.length || null,
+      total_tokens: null,
+      had_chart,
+      had_table,
+    });
+  }, [status, messages]);
+
+  const handleStop = () => {
+    userStoppedRef.current = true;
+    stop();
   };
 
   return (
@@ -125,7 +177,7 @@ export default function Page() {
         input={input}
         setInput={setInput}
         onSubmit={() => submit(input)}
-        onStop={stop}
+        onStop={handleStop}
         status={status}
         busy={busy}
       />
@@ -182,6 +234,7 @@ function ShareButton({
     setErrMsg(null);
     try {
       const { share_url } = await onShare();
+      trackShareCreated();
       try {
         if (
           typeof navigator !== "undefined" &&

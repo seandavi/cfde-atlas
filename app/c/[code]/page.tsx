@@ -10,6 +10,7 @@ import {
 import { StaticTranscript } from "@/app/components/MessageView";
 import { toIsoDate } from "@/app/lib/export/date";
 import { ForkButton } from "./ForkButton";
+import { ShareViewBeacon } from "./ShareViewBeacon";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,7 @@ export default async function SharedConversationPage({
 
   return (
     <div className="grid h-full grid-rows-[auto_1fr] bg-background text-foreground">
+      <ShareViewBeacon />
       {!embed && <SharedHeader row={row} code={code} />}
       <main className="overflow-y-auto scroll-smooth">
         <div className="mx-auto w-full max-w-3xl px-5 py-10 flex flex-col gap-6">
