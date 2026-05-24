@@ -160,7 +160,7 @@ The model plans a multi-step loop bounded by a step budget (currently 40) — it
 
 ## Data & provenance
 
-> ⚠️ **Do not cite figures from this app in external materials yet.** All in-scope ETL flows have landed, but results have not been independently vetted. Every assistant response carries a provenance footer reflecting data freshness and this caveat.
+All in-scope ETL flows have landed, but results have not been independently vetted. Every assistant response carries a provenance footer reflecting data freshness and this caveat. If you find data problems, please do not hesitate to report them. 
 
 All tables join on **NIH core project number** (e.g. `U54OD036472`) — the canonical identifier for CFDE awards. Sources that don't expose core-project linkage natively (raw GitHub repos, GA properties) go through a resolution step in `cfde-atlas-etl` before they land.
 
@@ -176,7 +176,7 @@ The CFDE FOA / core-project scope is **PR-curated** in `cfde-atlas-etl/config.ya
 - [x] SELECT-only SQL guard + Vega-Lite spec validator
 - [x] Shareable transcripts (HMAC-signed session cookies)
 - [x] Data-freshness footer + non-citation provenance
-- [ ] Production deploy
+- [x] Production deploy
 
 **Data flows** (`cfde-atlas-etl`)
 - [x] Opportunities (PR-curated FOAs)
