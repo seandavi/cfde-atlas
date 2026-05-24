@@ -4,20 +4,26 @@
 // BLUEPRINT.md §Gotchas (no prompt/response/result content in GA events)
 // can be audited by grepping this one file.
 //
-// Every helper is safe to call when NEXT_PUBLIC_GA_MEASUREMENT_ID is unset:
-// sendGAEvent silently warns in that case rather than throwing.
+// Every helper is safe to call when GA is not loaded — the runtime
+// dataLayer check below short-circuits before sendGAEvent runs.
 
 import { sendGAEvent } from "@next/third-parties/google";
 
 type ExportFormat = "copy" | "md" | "txt" | "docx" | "pdf";
 
+// Runtime check on window.dataLayer — NOT process.env.NEXT_PUBLIC_*.
+// NEXT_PUBLIC_* is inlined into client bundles at build time; the Docker
+// build does not have the GA ID set, so a process.env check would always
+// disable events in production regardless of runtime config. The
+// GoogleAnalytics tag in app/layout.tsx is the source of truth for
+// whether gtag/dataLayer exist on the page.
 function enabled(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID);
+  if (typeof window === "undefined") return false;
+  return Boolean((window as { dataLayer?: unknown[] }).dataLayer);
 }
 
 function emit(name: string, params: Record<string, unknown> = {}): void {
   if (!enabled()) return;
-  if (typeof window === "undefined") return;
   sendGAEvent("event", name, params);
 }
 

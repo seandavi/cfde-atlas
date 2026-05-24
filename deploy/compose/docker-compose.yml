@@ -56,6 +56,12 @@ services:
       # without it the new /api/sessions endpoints refuse to run in
       # production. See #22.
       SESSION_SIGNING_SECRET: ${SESSION_SIGNING_SECRET:?SESSION_SIGNING_SECRET must be set in .env (>= 16 chars)}
+      # GA4 measurement ID. Read at render time by app/layout.tsx (server
+      # component) and passed to <GoogleAnalytics gaId={...}> from
+      # @next/third-parties. Without this set in the container env, the
+      # GA script tag is never emitted regardless of what .env contains —
+      # compose only forwards vars named here, not all keys from .env.
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.cfde-atlas.rule=Host(`cfde-atlas.cancerdatasci.org`)"
