@@ -29,6 +29,12 @@ Surfaces the outputs and downstream reach of CFDE-funded work without requiring 
 
 ---
 
+# 🛠️ For developers
+
+Everything below is for people running, modifying, or deploying `cfde-atlas`. End users only need the live URL above.
+
+---
+
 ## Quickstart
 
 ```bash
