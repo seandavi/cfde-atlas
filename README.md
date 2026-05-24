@@ -86,29 +86,29 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     subgraph Browser
-        UI[Chat UI<br/>React 19 + Tailwind v4]
-        VE[vega-embed<br/>lazy-loaded]
+        UI["Chat UI<br/>React 19 + Tailwind v4"]
+        VE["vega-embed<br/>lazy-loaded"]
         UI --> VE
     end
 
     subgraph Next.js
-        ROUTE[/api/chat route handler]
-        TOOLS[cfdeTools<br/>list / describe / run / chart]
-        GUARD[SELECT-only guard<br/>+ VL spec validator]
-        TURN[turn-log<br/>telemetry]
-        SESS[/api/sessions/...<br/>HMAC-signed cookies]
+        ROUTE["/api/chat route handler"]
+        TOOLS["cfdeTools<br/>list / describe / run / chart"]
+        GUARD["SELECT-only guard<br/>+ VL spec validator"]
+        TURN["turn-log<br/>telemetry"]
+        SESS["/api/sessions/...<br/>HMAC-signed cookies"]
         ROUTE --> TOOLS
         TOOLS --> GUARD
         ROUTE --> TURN
     end
 
     subgraph Data
-        PG[(Postgres<br/>analytics.*)]
-        ETL[cfde-atlas-etl<br/>publications, grants,<br/>repos, analytics]
+        PG[("Postgres<br/>analytics.*")]
+        ETL["cfde-atlas-etl<br/>publications, grants,<br/>repos, analytics"]
         ETL --> PG
     end
 
-    LLM([Gemini 3.5 Flash<br/>@ai-sdk/google])
+    LLM(["Gemini 3.5 Flash<br/>@ai-sdk/google"])
 
     UI <-->|SSE| ROUTE
     ROUTE <--> LLM
