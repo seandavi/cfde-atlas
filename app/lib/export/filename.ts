@@ -1,10 +1,11 @@
+import { todayIsoDate } from "./date";
+
 export function exportFilename(
   prompt: string,
   ext: "md" | "txt" | "docx" | "pdf",
 ): string {
-  const date = new Date().toISOString().slice(0, 10);
   const slug = slugify(prompt) || "cfde-atlas-export";
-  return `${date}-${slug}.${ext}`;
+  return `${todayIsoDate()}-${slug}.${ext}`;
 }
 
 function slugify(text: string): string {

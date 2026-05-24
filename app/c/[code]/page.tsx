@@ -8,6 +8,7 @@ import {
   type SessionRow,
 } from "@/app/lib/sessions";
 import { StaticTranscript } from "@/app/components/MessageView";
+import { toIsoDate } from "@/app/lib/export/date";
 import { ForkButton } from "./ForkButton";
 
 export const dynamic = "force-dynamic";
@@ -84,8 +85,8 @@ export default async function SharedConversationPage({
           />
           {!embed && (
             <div className="text-[10px] text-foreground-faint mt-2 text-center">
-              {row.data_refreshed_at_max
-                ? `Data last refreshed ${new Date(row.data_refreshed_at_max).toISOString().slice(0, 10)} (UTC).`
+              {toIsoDate(row.data_refreshed_at_max)
+                ? `Data last refreshed ${toIsoDate(row.data_refreshed_at_max)} (UTC).`
                 : "Data refresh timestamp unavailable."}
             </div>
           )}
