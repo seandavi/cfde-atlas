@@ -44,9 +44,6 @@ export type TurnLogEvent = {
   // Rough output-size signal. Counts characters across all text parts
   // the assistant emitted; useful for plotting answer-length over time.
   response_text_chars: number | null;
-  // Cached input tokens — Gemini context cache hit count. Null when the
-  // cache is disabled or the provider does not report it.
-  cached_input_tokens: number | null;
   // Set if the stream ended in onError. Otherwise null.
   error: string | null;
 };
