@@ -8,7 +8,13 @@ import {
   type ToolUIPart,
   type UIMessage as SdkUIMessage,
 } from "ai";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import dynamic from "next/dynamic";
 
 import { useChatSession } from "./components/useChatSession";
@@ -48,7 +54,66 @@ const EXAMPLE_PROMPTS = [
     prompt: "How are CFDE publications cited by downstream NIH grants?",
     hint: "Walks the citation chain from CFDE pubs to derivative funding.",
   },
+  {
+    prompt:
+      "Which CFDE GitHub repos have the most active contributors in the last year?",
+    hint: "Surfaces sustained engineering effort across the CFDE software portfolio.",
+  },
+  {
+    prompt:
+      "Which CFDE codebases have gone quiet, with no commits in the last 6 months?",
+    hint: "Flags software-sustainability risk before it becomes a liability.",
+  },
+  {
+    prompt:
+      "Top 10 CFDE publications by relative citation ratio (RCR).",
+    hint: "Field-normalized impact via iCite — controls for discipline and year.",
+  },
+  {
+    prompt:
+      "Which NIH institutes fund grants that cite CFDE publications?",
+    hint: "Maps downstream reach across the breadth of the NIH portfolio.",
+  },
+  {
+    prompt:
+      "What journals publish CFDE work most often, and how do they rank in Scimago?",
+    hint: "Joins publications to Scimago for venue-quality context.",
+  },
+  {
+    prompt:
+      "Which CFDE program websites get the most traffic, broken down by country?",
+    hint: "Google Analytics pageviews crossed with visitor geography.",
+  },
+  {
+    prompt:
+      "How many DRC-registered data assets does each CFDE program contribute?",
+    hint: "DCC, file, and code manifests rolled up by program.",
+  },
+  {
+    prompt:
+      "Plot downstream NIH funding triggered by CFDE publications, by fiscal year.",
+    hint: "Citation chain to derivative grant dollars — the ROI story.",
+  },
 ] as const;
+
+const FEATURED_PROMPT_COUNT = 4;
+
+type ExamplePrompt = (typeof EXAMPLE_PROMPTS)[number];
+
+function pickRandomPrompts(count: number): readonly ExamplePrompt[] {
+  const arr = [...EXAMPLE_PROMPTS];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.slice(0, count);
+}
+
+const SERVER_FEATURED: readonly ExamplePrompt[] = EXAMPLE_PROMPTS.slice(
+  0,
+  FEATURED_PROMPT_COUNT,
+);
+const NEVER_CHANGES = () => () => {};
 
 const TOOL_LABEL: Record<string, string> = {
   list_tables: "Looking up available tables",
@@ -283,6 +348,24 @@ function ShareButton({
 /* ---------------- Empty state ---------------- */
 
 function EmptyState({ onPick }: { onPick: (prompt: string) => void }) {
+  // Pick a fresh random four on each client visit; SSR (and first hydration
+  // render) get a deterministic slice so the markup matches before React
+  // swaps in the client snapshot — keeps the landing page lively without
+  // tripping hydration warnings.
+  const clientFeaturedRef = useRef<readonly ExamplePrompt[] | null>(null);
+  const getClientFeatured = useCallback(() => {
+    if (clientFeaturedRef.current === null) {
+      clientFeaturedRef.current = pickRandomPrompts(FEATURED_PROMPT_COUNT);
+    }
+    return clientFeaturedRef.current;
+  }, []);
+  const getServerFeatured = useCallback(() => SERVER_FEATURED, []);
+  const featured = useSyncExternalStore(
+    NEVER_CHANGES,
+    getClientFeatured,
+    getServerFeatured,
+  );
+
   return (
     <div className="flex flex-col gap-7 mt-8">
       <div className="flex flex-col gap-2">
@@ -297,7 +380,7 @@ function EmptyState({ onPick }: { onPick: (prompt: string) => void }) {
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {EXAMPLE_PROMPTS.map(({ prompt, hint }) => (
+        {featured.map(({ prompt, hint }) => (
           <button
             key={prompt}
             type="button"
