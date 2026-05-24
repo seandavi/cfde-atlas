@@ -79,21 +79,6 @@ const EXAMPLE_PROMPTS = [
       "What journals publish CFDE work most often, and how do they rank in Scimago?",
     hint: "Joins publications to Scimago for venue-quality context.",
   },
-  {
-    prompt:
-      "Which CFDE program websites get the most traffic, broken down by country?",
-    hint: "Google Analytics pageviews crossed with visitor geography.",
-  },
-  {
-    prompt:
-      "How many DRC-registered data assets does each CFDE program contribute?",
-    hint: "DCC, file, and code manifests rolled up by program.",
-  },
-  {
-    prompt:
-      "Plot downstream NIH funding triggered by CFDE publications, by fiscal year.",
-    hint: "Citation chain to derivative grant dollars — the ROI story.",
-  },
 ] as const;
 
 const FEATURED_PROMPT_COUNT = 4;
