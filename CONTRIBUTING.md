@@ -83,6 +83,8 @@ ADRs are **part of the PR**, not a follow-up. If you're introducing a decision w
 - React: function components. `'use client'` only where the component genuinely needs the browser.
 - Default to writing no comments. Add a comment when the *why* is non-obvious — a workaround for a third-party bug, a non-obvious invariant. Don't restate what the code already says.
 - Don't add error handling, fallbacks, or validation for scenarios that can't happen. Only validate at system boundaries (user input, external APIs, LLM tool inputs).
+- Imports inside `app/` use the `@/` alias. Parent-relative imports (`../...`) are reserved for files under `__tests__/` and are flagged by ESLint elsewhere.
+- Date stamps in exports, the freshness footer, and any "as of today" string go through `app/lib/export/date.ts` (`todayIsoDate()` / `toIsoDate(iso)`). Don't inline `new Date().toISOString().slice(0, 10)`.
 
 ### LLM-facing surfaces
 

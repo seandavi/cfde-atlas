@@ -8,7 +8,7 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import { isToolUIPart, type UIMessage } from "ai";
-import { toolNameOf } from "../tools/part-name";
+import { toolNameOf } from "@/app/lib/tools/part-name";
 import type {
   Root,
   RootContent,
