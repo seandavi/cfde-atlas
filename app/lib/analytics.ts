@@ -66,3 +66,11 @@ export function trackShareViewed(): void {
 export function trackStreamAborted(args: { reason: string }): void {
   emit("stream_aborted", args);
 }
+
+export function trackFeedbackSubmitted(args: {
+  // rating: "up" | "down" | "cleared" — keep symbol-free for GA dashboards.
+  rating: "up" | "down" | "cleared";
+  had_note: boolean;
+}): void {
+  emit("feedback_submitted", args);
+}

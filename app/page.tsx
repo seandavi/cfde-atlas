@@ -30,6 +30,9 @@ import {
 const ExportBar = dynamic(() => import("./components/ExportBar"), {
   ssr: false,
 });
+const FeedbackBar = dynamic(() => import("./components/FeedbackBar"), {
+  ssr: false,
+});
 
 const EXAMPLE_PROMPTS = [
   {
@@ -166,6 +169,7 @@ export default function Page() {
                 message={m}
                 allMessages={messages}
                 inFlight={busy && i === messages.length - 1}
+                sessionId={sessionId}
               />
             ))
           )}
@@ -321,10 +325,12 @@ function Message({
   message,
   allMessages,
   inFlight,
+  sessionId,
 }: {
   message: UIMessage;
   allMessages: readonly UIMessage[];
   inFlight: boolean;
+  sessionId: string | null;
 }) {
   if (message.role === "user") {
     return <UserMessage message={message} />;
@@ -334,6 +340,7 @@ function Message({
       message={message}
       allMessages={allMessages}
       inFlight={inFlight}
+      sessionId={sessionId}
     />
   );
 }
@@ -357,10 +364,12 @@ function AssistantMessage({
   message,
   allMessages,
   inFlight,
+  sessionId,
 }: {
   message: UIMessage;
   allMessages: readonly UIMessage[];
   inFlight: boolean;
+  sessionId: string | null;
 }) {
   const toolParts = message.parts.filter(isToolUIPart);
   const hasContent = message.parts.some(
@@ -390,7 +399,10 @@ function AssistantMessage({
       })}
 
       {!inFlight && hasContent && (
-        <ExportBar messages={allMessages} message={message} />
+        <>
+          <ExportBar messages={allMessages} message={message} />
+          <FeedbackBar sessionId={sessionId} messageId={message.id} />
+        </>
       )}
     </div>
   );
