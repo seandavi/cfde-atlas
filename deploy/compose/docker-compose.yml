@@ -1,0 +1,92 @@
+# cfde-atlas — Next.js conversational interface for CFDE evaluation
+# metrics. Compose file lives with the app so deployment changes ship
+# in the same PR as the code change that needs them.
+#
+# Networking:
+#   - Joins `proxy` (external, managed by Traefik in monode/) so the
+#     Traefik labels below take effect.
+#   - Joins `pg_ducklake_stack_default` (external, also monode/) so the
+#     container can reach `pg_ducklake_18` over the docker bridge by
+#     name (DATABASE_URL).
+#
+# Environment:
+#   - Real secrets come from a `.env` file in this directory (gitignored
+#     — copy `.env.example`). `${VAR}` interpolation references those at
+#     `docker compose up` time; the image itself bakes nothing in.
+
+services:
+  cfde-atlas:
+    # Image is built and published to GHCR by the `publish-container`
+    # workflow in this repo (.github/workflows/). `:latest` tracks main
+    # HEAD; to pin to a specific commit, swap for
+    # `ghcr.io/seandavi/cfde-atlas:sha-<short>` (the workflow tags
+    # each build with the commit sha too).
+    image: ghcr.io/seandavi/cfde-atlas:latest
+    pull_policy: always   # follow `:latest` reliably across `docker compose up -d`
+    container_name: cfde_atlas
+    restart: unless-stopped
+    networks:
+      - proxy
+      - pg_ducklake_stack_default
+    volumes:
+      # Per-turn chat telemetry. The app's onFinish callback appends
+      # one JSON line per assistant turn here; the Vector container in
+      # monode/infrastructure/compose/vector tails the same file
+      # (read-only) and ships rows to ClickHouse (table:
+      # cfde_atlas_chat_turns). The host directory must be owned by
+      # uid 1001 (the Next.js standalone container's `nextjs` user);
+      # create it with:
+      #   sudo install -d -o 1001 -g 1001 /data/davsean/cfde_atlas_logs
+      - /data/davsean/cfde_atlas_logs:/var/log/cfde-atlas:rw
+    environment:
+      # Gemini API access — required. See .env.example.
+      GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:?GOOGLE_GENERATIVE_AI_API_KEY must be set in .env}
+      # Postgres connection — required. Resolves `pg_ducklake_18` over the
+      # `pg_ducklake_stack_default` docker bridge below. Password sourced
+      # from GSM (cdsci-infra / cfde-atlas-dev-db-password-onclappc02).
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in .env}
+      # Tell the Next.js server it sits behind a TLS-terminating proxy so
+      # request URLs reflect the public origin in server components.
+      NEXT_PUBLIC_BASE_URL: https://cfde-atlas.cancerdatasci.org
+      # Public origin used to mint shareable transcript URLs server-side
+      # (no NEXT_PUBLIC_ prefix — server-only). See app/api/
+      # sessions/[id]/share/route.ts.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://cfde-atlas.cancerdatasci.org}
+      # HMAC secret used to sign per-session caller cookies. Required —
+      # without it the new /api/sessions endpoints refuse to run in
+      # production. See #22.
+      SESSION_SIGNING_SECRET: ${SESSION_SIGNING_SECRET:?SESSION_SIGNING_SECRET must be set in .env (>= 16 chars)}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cfde-atlas.rule=Host(`cfde-atlas.cancerdatasci.org`)"
+      - "traefik.http.routers.cfde-atlas.entrypoints=websecure"
+      - "traefik.http.routers.cfde-atlas.tls=true"
+      # NO certresolver: this hostname is proxied at Cloudflare (orange
+      # cloud); LE TLS-ALPN-01 can't complete behind the proxy. Traefik
+      # falls back to the default cert in monode/.../traefik/config/tls.yml
+      # (the *.cancerdatasci.org Cloudflare Origin Cert, valid through
+      # 2041). Same pattern as cmgd.cancerdatasci.org.
+      - "traefik.http.services.cfde-atlas.loadbalancer.server.port=3000"
+    healthcheck:
+      # Hits the app's /api/health which does a SELECT 1 against pg
+      # under a 5s timeout. CMD-SHELL (not CMD) so we can both check
+      # HTTP 200 AND verify the response body contains "Healthy" —
+      # same dual contract the GCP uptime check enforces from outside
+      # (see monode terraform/apps/cfde_atlas/main.tf).
+      #
+      # 127.0.0.1 (not "localhost") because the Next.js server binds to
+      # IPv4 0.0.0.0:3000 (HOSTNAME=0.0.0.0 in the Dockerfile). Alpine's
+      # busybox wget resolves localhost to ::1 first, which gets refused.
+      test:
+        - "CMD-SHELL"
+        - "wget -q -O - http://127.0.0.1:3000/api/health | grep -q Healthy"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  proxy:
+    external: true
+  pg_ducklake_stack_default:
+    external: true
