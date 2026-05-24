@@ -8,7 +8,7 @@ import {
   exportPlainText,
   exportDocx,
   exportPdf,
-} from "../lib/export";
+} from "@/app/lib/export";
 
 type Props = {
   messages: readonly UIMessage[];
