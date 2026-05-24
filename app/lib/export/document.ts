@@ -8,6 +8,7 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import { isToolUIPart, type UIMessage } from "ai";
+import { toolNameOf } from "../tools/part-name";
 import type {
   Root,
   RootContent,
@@ -246,12 +247,6 @@ export function inlinesToPlain(inlines: Inline[]): string {
       }
     })
     .join("");
-}
-
-function toolNameOf(part: { type: string; toolName?: string }): string {
-  return part.type === "dynamic-tool"
-    ? part.toolName ?? ""
-    : part.type.replace(/^tool-/, "");
 }
 
 function isChartOutput(
