@@ -30,6 +30,14 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Telemetry is opt-out but explicit silence beats accidental opt-in.
 ENV NEXT_TELEMETRY_DISABLED=1
+# NEXT_PUBLIC_* vars are resolved at build time: inlined into client
+# bundles AND captured by server components during prerender. The root
+# layout reads NEXT_PUBLIC_GA_MEASUREMENT_ID to decide whether to emit
+# the <GoogleAnalytics> tag, and the layout is statically prerendered,
+# so the value MUST be present here — runtime env in the runner stage
+# is too late.
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
+ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
 RUN npm run build
 
 # --- runner ---------------------------------------------------------------
