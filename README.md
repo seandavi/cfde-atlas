@@ -1,16 +1,29 @@
 # cfde-atlas
 
-Conversational interface for **NIH program officers** to explore Common Fund Data Ecosystem (CFDE) evaluation metrics — bibliometrics, grants, code activity, web analytics — keyed by NIH core project number (e.g. `U54OD036472`).
+> A conversational lens on Common Fund Data Ecosystem (CFDE) evaluation metrics — bibliometrics, grants, code activity, and web analytics — keyed by NIH core project number.
 
-Primary use case: ad-hoc query support in preparation for the annual **Council of Councils** meeting. The deliverable is tables and figures, not chat.
+Built for **NIH program staff** preparing for the annual **Council of Councils** meeting. The deliverable is tables and figures suitable for leadership briefings; the chat surface is the means, not the artifact.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![React 19](https://img.shields.io/badge/React-19-61dafb?logo=react)
+![Tailwind v4](https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwindcss)
+![AI SDK v6](https://img.shields.io/badge/Vercel%20AI%20SDK-v6-000)
 
 ---
 
-## Status
+## Features
 
-Early. The chat surface and four LLM-callable tools (`list_tables`, `describe_table`, `run_query`, `render_chart`) are wired against **mocked sample data** so the conversational layer can be tested before the ETL lands. Every assistant response includes a footer noting that figures are illustrative and must not be cited. See [BLUEPRINT.md](BLUEPRINT.md) for the data sources that will replace the mock.
+- 💬 **Conversational query** — ask in plain English; no SQL, no notebook required.
+- 🔧 **LLM-callable tools** — the model drives `list_tables`, `describe_table`, `run_query`, and `render_chart` to plan and execute multi-step answers.
+- 📊 **Inline charts** — Vega-Lite figures rendered alongside the source table, every time.
+- 📑 **GFM tables** in chat output, copyable into reports.
+- 🧾 **Provenance footer** on every assistant response — model, data freshness, and a non-citation caveat.
+- 🔗 **Shareable transcripts** — read-only links to the full back-and-forth (tool calls included).
+- 📤 **Export-friendly** — output shaped for slide decks and program reports, not just screen reading.
+- 🛡️ **SELECT-only SQL guard** — the query tool rejects anything that isn't a single read.
+
+---
 
 ## Quickstart
 
@@ -22,7 +35,7 @@ echo "GOOGLE_GENERATIVE_AI_API_KEY=…" > .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and try one of the example prompts (e.g. "Plot FY2024 funding by CFDE program, horizontal bar, sorted descending").
+Open [http://localhost:3000](http://localhost:3000) and try one of the seeded prompts (e.g. *"Plot total FY2024 funding by CFDE program, horizontal bar, sorted descending."*).
 
 ### Environment
 
@@ -31,26 +44,151 @@ Open [http://localhost:3000](http://localhost:3000) and try one of the example p
 | `GOOGLE_GENERATIVE_AI_API_KEY` | yes | Gemini API access via `@ai-sdk/google`. |
 | `DATABASE_URL` | not yet | Postgres connection. Wiring tracked in the open issues. |
 
-## Stack
+---
 
-- **Frontend:** Next.js 16 (App Router, Turbopack) + React 19 + Tailwind v4
-- **Chat:** Vercel AI SDK v6 → `@ai-sdk/google` → `gemini-3.5-flash`
-- **Charting:** Vega-Lite (lazy-loaded via `vega-embed`)
-- **Markdown:** `react-markdown` + `remark-gfm` for GFM tables
-- **Backend (planned):** Postgres via `postgres.js`. Host TBD — see open issues.
+## Architecture
+
+A single Next.js deployment fronts a Gemini-driven tool loop against the CFDE evaluation database. No Python sidecar, no MCP server — schema introspection and query are LLM tools exposed via the AI SDK.
+
+### Request flow
+
+```mermaid
+sequenceDiagram
+    actor PO as Program Officer
+    participant UI as Next.js UI<br/>(React 19)
+    participant API as /api/chat<br/>(route handler)
+    participant LLM as Gemini 3.5 Flash<br/>(via @ai-sdk/google)
+    participant Tools as cfdeTools<br/>(list/describe/run/chart)
+    participant DB as Postgres<br/>(analytics schema)
+    participant VL as Vega-Lite<br/>(client render)
+
+    PO->>UI: "Top 5 publications by citations"
+    UI->>API: POST messages[]
+    API->>LLM: system prompt + tools + messages
+    LLM->>Tools: list_tables / describe_table
+    Tools->>DB: information_schema lookups
+    DB-->>Tools: table + column metadata
+    Tools-->>LLM: schema with FK annotations
+    LLM->>Tools: run_query(SELECT …)
+    Tools->>DB: SELECT (guarded, capped)
+    DB-->>Tools: rows
+    Tools-->>LLM: rows + freshness notice
+    LLM->>Tools: render_chart(vega-lite spec)
+    Tools-->>LLM: validated spec
+    LLM-->>API: streamed text + tool parts
+    API-->>UI: SSE stream
+    UI->>VL: lazy-load + embed spec
+    VL-->>PO: figure + table + provenance footer
+```
+
+### Component view
+
+```mermaid
+flowchart LR
+    subgraph Browser
+        UI[Chat UI<br/>React 19 + Tailwind v4]
+        VE[vega-embed<br/>lazy-loaded]
+        UI --> VE
+    end
+
+    subgraph Next.js
+        ROUTE[/api/chat route handler]
+        TOOLS[cfdeTools<br/>list / describe / run / chart]
+        GUARD[SELECT-only guard<br/>+ VL spec validator]
+        TURN[turn-log<br/>telemetry]
+        SESS[/api/sessions/...<br/>HMAC-signed cookies]
+        ROUTE --> TOOLS
+        TOOLS --> GUARD
+        ROUTE --> TURN
+    end
+
+    subgraph Data
+        PG[(Postgres<br/>analytics.*)]
+        ETL[icc-eval-core ETL<br/>publications, grants,<br/>repos, analytics]
+        ETL --> PG
+    end
+
+    LLM([Gemini 3.5 Flash<br/>@ai-sdk/google])
+
+    UI <-->|SSE| ROUTE
+    ROUTE <--> LLM
+    LLM <-->|tool calls| TOOLS
+    TOOLS <--> PG
+    UI <--> SESS
+```
+
+The model plans a multi-step loop bounded by a step budget (currently 40) — it explores schema, drafts SQL, runs it, and decides whether a chart adds clarity. Both the SQL guard and the Vega-Lite validator return *specific* error messages so the model can self-correct mid-turn.
+
+---
+
+## Tech stack
+
+### Frontend
+- **Next.js 16** (App Router, Turbopack) — single deployment, server components, streaming responses.
+- **React 19** with Server Components.
+- **Tailwind v4** — utility-first styling, no design-system overhead.
+
+### LLM layer
+- **Vercel AI SDK v6** (`ai`, `@ai-sdk/google`, `@ai-sdk/react`) — provider-agnostic tool calling, streaming, UI message types.
+- **Gemini 3.5 Flash** — 1M-token context, native function calling, cost profile sized for many ad-hoc queries.
+
+### Data
+- **Postgres** via `postgres.js` for the analytics schema.
+- **icc-eval-core** upstream ETL ([nih-cfde/icc-eval-core](https://github.com/nih-cfde/icc-eval-core)) feeds `analytics.publications` today; grants, GitHub activity, and Google Analytics are in progress.
+
+### Rendering & content
+- **Vega-Lite v5** via `vega-embed`, lazy-loaded so first paint stays light.
+- **react-markdown** + **remark-gfm** for GFM tables in assistant output.
+
+### Tooling
+- **TypeScript** end-to-end.
+- **Vitest** for unit tests (SQL guard, Vega validator, schema introspection).
+- **ESLint** with project-specific rules for import style and date-stamp conventions.
+
+---
+
+## Data & provenance
+
+> ⚠️ **Do not cite figures from this app in external materials yet.** Bibliometrics (`analytics.publications`) are loaded; grants, GitHub activity, and Google Analytics are still mocked or partial. Every assistant response carries a provenance footer reflecting this.
+
+All tables join on **NIH core project number** (e.g. `U54OD036472`) — the unit program officers actually navigate by. Data sources that don't expose core-project linkage natively (raw GitHub repos, GA properties) require a resolution step before they land.
+
+---
+
+## Status & roadmap
+
+- [x] Conversational chat surface
+- [x] Tool loop: `list_tables`, `describe_table`, `run_query`, `render_chart`
+- [x] SELECT-only SQL guard + Vega-Lite spec validator
+- [x] Shareable transcripts (HMAC-signed session cookies)
+- [x] `analytics.publications` loaded from `icc-eval-core`
+- [ ] Grants ETL (NIH RePORTER)
+- [ ] GitHub activity ETL (~175 repos)
+- [ ] Google Analytics ETL (~20 properties)
+- [ ] Datasets-deposited metrics (the strongest "CFDE works" signal)
+- [ ] Auth gate (see [`cfde-eval-protector`](https://github.com/cfde/cfde-eval-protector))
+- [ ] Production deploy
+
+See [BLUEPRINT.md](BLUEPRINT.md) for the full design rationale and the open ETL issues for source-by-source status.
+
+---
 
 ## Documentation
 
-- **[BLUEPRINT.md](BLUEPRINT.md)** — durable design doc. Purpose, audience constraints, architecture, model choice, tool contract, deploy story, gotchas. Read this before changing anything structural.
+- **[BLUEPRINT.md](BLUEPRINT.md)** — durable design doc: purpose, audience constraints, architecture, model choice, tool contract, deploy story, gotchas. Read this before changing anything structural.
 - **[docs/decisions/](docs/decisions/)** — Architecture Decision Records (ADRs). One file per substantive technical decision, with revisit triggers.
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — dev setup, commit conventions, PR workflow.
 - **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — contributor expectations.
-- **[CLAUDE.md](CLAUDE.md) / [AGENTS.md](AGENTS.md)** — guidance for AI agents working in this repo. Both files declare project-specific quirks (e.g. "this is not the Next.js you know — read the local docs first").
+- **[CLAUDE.md](CLAUDE.md) / [AGENTS.md](AGENTS.md)** — guidance for AI agents working in this repo. Both files declare project-specific quirks (e.g. *"this is not the Next.js you know — read the local docs first"*).
+
+---
 
 ## Related repositories
 
-- [`icc-eval-core`](https://github.com/nih-cfde/icc-eval-core) — the underlying CFDE evaluation ETL. cfde-atlas is the view; that's the data layer.
-- [`cfde-eval-protector`](https://github.com/cfde/cfde-eval-protector) — ORCID-OAuth reverse proxy. Reserved for if/when access control becomes a binary need (see BLUEPRINT §Auth).
+- [`icc-eval-core`](https://github.com/nih-cfde/icc-eval-core) — the underlying CFDE evaluation ETL. `cfde-atlas` is the view; that's the data layer.
+- [`cfde-eval-protector`](https://github.com/cfde/cfde-eval-protector) — ORCID-OAuth reverse proxy. Reserved for if/when access control becomes a binary need (see [BLUEPRINT §Auth](BLUEPRINT.md)).
+
+---
 
 ## License
 
