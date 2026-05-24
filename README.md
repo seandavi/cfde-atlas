@@ -178,7 +178,6 @@ The CFDE FOA / core-project scope is **PR-curated** in `cfde-atlas-etl/config.ya
 - [x] GitHub repos, weekly activity, contributors
 - [x] Google Analytics — pageviews, top pages, geo, traffic sources, property coverage
 - [ ] ORCID → core-project access mapping (for GA gating)
-- [ ] Datasets-deposited metrics (GEO / dbGaP / Synapse / OSF) — the strongest "CFDE works" signal
 
 See [BLUEPRINT.md](BLUEPRINT.md) for the full design rationale and the [`cfde-atlas-etl`](https://github.com/seandavi/cfde-atlas-etl) flows table for per-source contracts.
 
