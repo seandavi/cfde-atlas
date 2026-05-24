@@ -91,7 +91,15 @@ ADRs are **part of the PR**, not a follow-up. If you're introducing a decision w
 If your change touches the system prompt or the tool schemas / descriptions:
 
 - Treat the prompt and the tool description text as **production strings** the model reads to decide what to do. Test that Gemini still uses the tools correctly after your change.
-- Tool input schemas need to round-trip through Google's OpenAPI conversion. Stick to plain Zod types; nested `z.record(...)` schemas have been observed to cause Gemini to mangle keys. See ADR 0001 and the inline comment in `app/lib/tools/index.ts`.
+- The system prompt body (`app/lib/prompts/system.ts`) is a versioned contract — see [ADR 0004](docs/decisions/0004-system-prompt-contract.md). Any change to the prompt updates that ADR with one bullet per rule changed.
+- Tool input schemas need to round-trip through Google's OpenAPI conversion. Stick to plain Zod types; nested `z.record(...)` schemas have been observed to cause Gemini to mangle keys. See [ADR 0001](docs/decisions/0001-render-chart-payload.md) and the inline comment in `app/lib/tools/index.ts`.
+
+### Turn-log telemetry
+
+If your change touches `app/lib/turn-log.ts`, `app/api/chat/route.ts`, or the JSONL written to `turns.log`:
+
+- The event shape is a contract with the downstream Vector → ClickHouse ingest. See [ADR 0003](docs/decisions/0003-turn-log-schema.md).
+- Adding a nullable field is safe. Renaming or removing a field is coordinated with the deploy side and noted in the ADR.
 
 ### Mock data
 
