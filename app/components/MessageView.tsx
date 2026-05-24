@@ -232,7 +232,7 @@ export function CompletedTrail({ toolParts }: { toolParts: ToolPart[] }) {
   );
 }
 
-export function Chevron() {
+function Chevron() {
   return (
     <svg
       width="10"
