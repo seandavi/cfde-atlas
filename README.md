@@ -133,8 +133,9 @@ The model plans a multi-step loop bounded by a step budget (currently 40) — it
 - **Gemini 3.5 Flash** — 1M-token context, native function calling, cost profile sized for many ad-hoc queries.
 
 ### Data
-- **Postgres** via `postgres.js` for the analytics schema.
-- **[`cfde-atlas-etl`](https://github.com/seandavi/cfde-atlas-etl)** — Python ETL that lands data into `analytics.*`. Sources `analytics.publications` from upstream [`nih-cfde/icc-eval-core`](https://github.com/nih-cfde/icc-eval-core) today; grants, GitHub activity, and Google Analytics flows in progress.
+- **Postgres** via `postgres.js` reading an **ELT-style** schema: sources land in `raw.*` as `jsonb`, transformations are `analytics.*` SQL views. Per-column `COMMENT ON COLUMN` text is part of the contract — it's what `describe_table` returns to the model.
+- **[`cfde-atlas-etl`](https://github.com/seandavi/cfde-atlas-etl)** — Prefect/Python flows that land each source. Live flows: opportunities, projects, publications + iCite enrichment, journals (Scimago + Entrez), DRC assets, GitHub repos + activity + contributors, GA4 pageviews/top pages/geo/traffic-sources, citing publications, citing grants, citing-grant details.
+- **[`nih-cfde/icc-eval-core`](https://github.com/nih-cfde/icc-eval-core)** — upstream reference set for the curated FOA / core-project list mirrored into `cfde-atlas-etl/config.yaml`.
 
 ### Rendering & content
 - **Vega-Lite v5** via `vega-embed`, lazy-loaded so first paint stays light.
@@ -149,26 +150,37 @@ The model plans a multi-step loop bounded by a step budget (currently 40) — it
 
 ## Data & provenance
 
-> ⚠️ **Do not cite figures from this app in external materials yet.** Bibliometrics (`analytics.publications`) are loaded; grants, GitHub activity, and Google Analytics are still mocked or partial. Every assistant response carries a provenance footer reflecting this.
+> ⚠️ **Do not cite figures from this app in external materials yet.** All in-scope ETL flows have landed, but results have not been independently vetted for use in NIH leadership briefings. Every assistant response carries a provenance footer reflecting data freshness and this caveat.
 
-All tables join on **NIH core project number** (e.g. `U54OD036472`) — the unit program officers actually navigate by. Data sources that don't expose core-project linkage natively (raw GitHub repos, GA properties) require a resolution step before they land.
+All tables join on **NIH core project number** (e.g. `U54OD036472`) — the unit program officers actually navigate by. Sources that don't expose core-project linkage natively (raw GitHub repos, GA properties) go through a resolution step in `cfde-atlas-etl` before they land.
+
+The CFDE FOA / core-project scope is **PR-curated** in `cfde-atlas-etl/config.yaml` — adding or removing a project is a code review with an audit trail, not a scrape.
 
 ---
 
 ## Status & roadmap
 
+**App**
 - [x] Conversational chat surface
 - [x] Tool loop: `list_tables`, `describe_table`, `run_query`, `render_chart`
 - [x] SELECT-only SQL guard + Vega-Lite spec validator
 - [x] Shareable transcripts (HMAC-signed session cookies)
-- [x] `analytics.publications` loaded via `cfde-atlas-etl`
-- [ ] Grants ETL (NIH RePORTER)
-- [ ] GitHub activity ETL (~175 repos)
-- [ ] Google Analytics ETL (~20 properties)
-- [ ] Datasets-deposited metrics (the strongest "CFDE works" signal)
+- [x] Data-freshness footer + non-citation provenance
 - [ ] Production deploy
 
-See [BLUEPRINT.md](BLUEPRINT.md) for the full design rationale and the open ETL issues for source-by-source status.
+**Data flows** (`cfde-atlas-etl`)
+- [x] Opportunities (PR-curated FOAs)
+- [x] Projects (NIH RePORTER) + core-project rollups
+- [x] Publications (RePORTER + iCite enrichment)
+- [x] Journals (Scimago ranks + Entrez metadata)
+- [x] Citation chain — citing publications, citing grants, downstream funding rollups
+- [x] DRC assets (DCC, file, code manifests)
+- [x] GitHub repos, weekly activity, contributors
+- [x] Google Analytics — pageviews, top pages, geo, traffic sources, property coverage
+- [ ] ORCID → core-project access mapping (for GA gating)
+- [ ] Datasets-deposited metrics (GEO / dbGaP / Synapse / OSF) — the strongest "CFDE works" signal
+
+See [BLUEPRINT.md](BLUEPRINT.md) for the full design rationale and the [`cfde-atlas-etl`](https://github.com/seandavi/cfde-atlas-etl) flows table for per-source contracts.
 
 ---
 
