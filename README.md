@@ -104,7 +104,7 @@ flowchart LR
 
     subgraph Data
         PG[(Postgres<br/>analytics.*)]
-        ETL[icc-eval-core ETL<br/>publications, grants,<br/>repos, analytics]
+        ETL[cfde-atlas-etl<br/>publications, grants,<br/>repos, analytics]
         ETL --> PG
     end
 
@@ -134,7 +134,7 @@ The model plans a multi-step loop bounded by a step budget (currently 40) — it
 
 ### Data
 - **Postgres** via `postgres.js` for the analytics schema.
-- **icc-eval-core** upstream ETL ([nih-cfde/icc-eval-core](https://github.com/nih-cfde/icc-eval-core)) feeds `analytics.publications` today; grants, GitHub activity, and Google Analytics are in progress.
+- **[`cfde-atlas-etl`](https://github.com/seandavi/cfde-atlas-etl)** — Python ETL that lands data into `analytics.*`. Sources `analytics.publications` from upstream [`nih-cfde/icc-eval-core`](https://github.com/nih-cfde/icc-eval-core) today; grants, GitHub activity, and Google Analytics flows in progress.
 
 ### Rendering & content
 - **Vega-Lite v5** via `vega-embed`, lazy-loaded so first paint stays light.
@@ -161,12 +161,11 @@ All tables join on **NIH core project number** (e.g. `U54OD036472`) — the unit
 - [x] Tool loop: `list_tables`, `describe_table`, `run_query`, `render_chart`
 - [x] SELECT-only SQL guard + Vega-Lite spec validator
 - [x] Shareable transcripts (HMAC-signed session cookies)
-- [x] `analytics.publications` loaded from `icc-eval-core`
+- [x] `analytics.publications` loaded via `cfde-atlas-etl`
 - [ ] Grants ETL (NIH RePORTER)
 - [ ] GitHub activity ETL (~175 repos)
 - [ ] Google Analytics ETL (~20 properties)
 - [ ] Datasets-deposited metrics (the strongest "CFDE works" signal)
-- [ ] Auth gate (see [`cfde-eval-protector`](https://github.com/cfde/cfde-eval-protector))
 - [ ] Production deploy
 
 See [BLUEPRINT.md](BLUEPRINT.md) for the full design rationale and the open ETL issues for source-by-source status.
@@ -185,8 +184,8 @@ See [BLUEPRINT.md](BLUEPRINT.md) for the full design rationale and the open ETL 
 
 ## Related repositories
 
-- [`icc-eval-core`](https://github.com/nih-cfde/icc-eval-core) — the underlying CFDE evaluation ETL. `cfde-atlas` is the view; that's the data layer.
-- [`cfde-eval-protector`](https://github.com/cfde/cfde-eval-protector) — ORCID-OAuth reverse proxy. Reserved for if/when access control becomes a binary need (see [BLUEPRINT §Auth](BLUEPRINT.md)).
+- [`cfde-atlas-etl`](https://github.com/seandavi/cfde-atlas-etl) — Python ETL that lands CFDE evaluation data into the `analytics.*` schema this app reads from.
+- [`nih-cfde/icc-eval-core`](https://github.com/nih-cfde/icc-eval-core) — upstream CFDE evaluation data source consumed by `cfde-atlas-etl`.
 
 ---
 
