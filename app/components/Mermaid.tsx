@@ -2,10 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-type MermaidApi = {
-  initialize: (config: Record<string, unknown>) => void;
-  render: (id: string, src: string) => Promise<{ svg: string }>;
-};
+import { renderMermaidSvg, type MermaidApi } from "@/app/lib/mermaid";
 
 let mermaidPromise: Promise<MermaidApi> | null = null;
 function loadMermaid(): Promise<MermaidApi> {
@@ -34,19 +31,20 @@ export default function Mermaid({ chart }: { chart: string }) {
     let cancelled = false;
     (async () => {
       try {
+        const container = containerRef.current;
+        if (!container) return;
         const mermaid = await loadMermaid();
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: dark ? "dark" : "default",
-          securityLevel: "strict",
-          fontFamily: "inherit",
-        });
-        const { svg } = await mermaid.render(
-          `mermaid-${baseId}-${renderKey}`,
+        container.innerHTML = "";
+        const { svg, bindFunctions } = await renderMermaidSvg({
+          mermaid,
+          id: `mermaid-${baseId}-${renderKey}`,
           chart,
-        );
-        if (!cancelled && containerRef.current) {
-          containerRef.current.innerHTML = svg;
+          container,
+          theme: dark ? "dark" : "default",
+        });
+        if (!cancelled) {
+          container.innerHTML = svg;
+          bindFunctions?.(container);
           setError(null);
         }
       } catch (e) {
