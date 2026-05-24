@@ -1,8 +1,8 @@
 # cfde-atlas
 
-> A conversational lens on Common Fund Data Ecosystem (CFDE) evaluation metrics — bibliometrics, grants, code activity, and web analytics — keyed by NIH core project number.
+> A conversational lens on Common Fund Data Ecosystem (CFDE) work products and impact — bibliometrics, grants, code activity, and web analytics — keyed by NIH core project number.
 
-Built for **NIH program staff** preparing for the annual **Council of Councils** meeting. The deliverable is tables and figures suitable for leadership briefings; the chat surface is the means, not the artifact.
+Surfaces the outputs and downstream reach of CFDE-funded work without requiring SQL or notebooks. The deliverable is tables and figures; the chat surface is the means, not the artifact.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
@@ -54,7 +54,7 @@ A single Next.js deployment fronts a Gemini-driven tool loop against the CFDE ev
 
 ```mermaid
 sequenceDiagram
-    actor PO as Program Officer
+    actor User as User
     participant UI as Next.js UI<br/>(React 19)
     participant API as /api/chat<br/>(route handler)
     participant LLM as Gemini 3.5 Flash<br/>(via @ai-sdk/google)
@@ -62,7 +62,7 @@ sequenceDiagram
     participant DB as Postgres<br/>(analytics schema)
     participant VL as Vega-Lite<br/>(client render)
 
-    PO->>UI: "Top 5 publications by citations"
+    User->>UI: "Top 5 publications by citations"
     UI->>API: POST messages[]
     API->>LLM: system prompt + tools + messages
     LLM->>Tools: list_tables / describe_table
@@ -78,7 +78,7 @@ sequenceDiagram
     LLM-->>API: streamed text + tool parts
     API-->>UI: SSE stream
     UI->>VL: lazy-load + embed spec
-    VL-->>PO: figure + table + provenance footer
+    VL-->>User: figure + table + provenance footer
 ```
 
 ### Component view
@@ -150,9 +150,9 @@ The model plans a multi-step loop bounded by a step budget (currently 40) — it
 
 ## Data & provenance
 
-> ⚠️ **Do not cite figures from this app in external materials yet.** All in-scope ETL flows have landed, but results have not been independently vetted for use in NIH leadership briefings. Every assistant response carries a provenance footer reflecting data freshness and this caveat.
+> ⚠️ **Do not cite figures from this app in external materials yet.** All in-scope ETL flows have landed, but results have not been independently vetted. Every assistant response carries a provenance footer reflecting data freshness and this caveat.
 
-All tables join on **NIH core project number** (e.g. `U54OD036472`) — the unit program officers actually navigate by. Sources that don't expose core-project linkage natively (raw GitHub repos, GA properties) go through a resolution step in `cfde-atlas-etl` before they land.
+All tables join on **NIH core project number** (e.g. `U54OD036472`) — the canonical identifier for CFDE awards. Sources that don't expose core-project linkage natively (raw GitHub repos, GA properties) go through a resolution step in `cfde-atlas-etl` before they land.
 
 The CFDE FOA / core-project scope is **PR-curated** in `cfde-atlas-etl/config.yaml` — adding or removing a project is a code review with an audit trail, not a scrape.
 
