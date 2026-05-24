@@ -148,28 +148,3 @@ export async function getDataRefreshedAt(): Promise<string | null> {
     return null;
   }
 }
-
-function formatDescribeAsMarkdown(d: DescribeResult): string {
-  const head = `## analytics.${d.name} (${d.kind})${d.description ? ` — ${d.description}` : ""}`;
-  const colLines = d.columns.map((c) => {
-    const nullable = c.nullable ? "" : " NOT NULL";
-    const notes = c.notes ? ` — ${c.notes}` : "";
-    return `- \`${c.name}\` ${c.type}${nullable}${notes}`;
-  });
-  const sample =
-    d.sample_row !== null
-      ? `\n\nSample row: \`${JSON.stringify(d.sample_row)}\``
-      : "";
-  const count = `\n\nRow count: ${d.row_count.toLocaleString()}`;
-  return `${head}\n\n${colLines.join("\n")}${count}${sample}`;
-}
-
-export async function dumpAllAnalyticsSchemas(): Promise<string> {
-  const tables = await listAnalyticsTables();
-  const parts: string[] = [];
-  for (const t of tables) {
-    const d = await describeAnalyticsTable(t.name);
-    if (d) parts.push(formatDescribeAsMarkdown(d));
-  }
-  return parts.join("\n\n---\n\n");
-}

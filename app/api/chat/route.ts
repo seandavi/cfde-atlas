@@ -7,7 +7,6 @@ import {
 } from "ai";
 import { google } from "@ai-sdk/google";
 
-import { getOrCreateCachedContent } from "@/app/lib/cache/gemini-cache";
 import { buildSystemPrompt } from "@/app/lib/prompts/system";
 import { sessionCookieName } from "@/app/lib/sessions";
 import { cfdeTools } from "@/app/lib/tools";
@@ -47,30 +46,12 @@ export async function POST(req: Request) {
   );
   const startedAt = Date.now();
 
-  const systemPrompt = buildSystemPrompt({ maxSteps: MAX_STEPS });
-
-  // Best-effort: when caching is enabled we attach the cache resource
-  // name via providerOptions. A miss / disabled flag returns null and
-  // we fall through to the uncached path; never block the turn on it.
-  let cachedContent: string | null = null;
-  try {
-    cachedContent = await getOrCreateCachedContent({
-      modelId: MODEL_ID,
-      systemPrompt,
-    });
-  } catch (e) {
-    console.warn("[gemini-cache] getOrCreateCachedContent threw", e);
-  }
-
   const result = streamText({
     model: google(MODEL_ID),
-    system: systemPrompt,
+    system: buildSystemPrompt({ maxSteps: MAX_STEPS }),
     messages: await convertToModelMessages(messages),
     tools: cfdeTools,
     stopWhen: stepCountIs(MAX_STEPS),
-    providerOptions: cachedContent
-      ? { google: { cachedContent } }
-      : undefined,
     onFinish: async (event) => {
       const e = event as {
         finishReason?: string;
@@ -78,18 +59,11 @@ export async function POST(req: Request) {
           inputTokens?: number;
           outputTokens?: number;
           totalTokens?: number;
-          cachedInputTokens?: number;
         };
         totalUsage?: {
           inputTokens?: number;
           outputTokens?: number;
           totalTokens?: number;
-          cachedInputTokens?: number;
-        };
-        providerMetadata?: {
-          google?: {
-            usageMetadata?: { cachedContentTokenCount?: number | null };
-          };
         };
         steps?: ReadonlyArray<{ toolCalls?: Array<{ toolName: string }> }>;
         response?: {
@@ -100,10 +74,6 @@ export async function POST(req: Request) {
         };
       };
       const usage = e.totalUsage ?? e.usage ?? {};
-      const cachedTokens =
-        usage.cachedInputTokens ??
-        e.providerMetadata?.google?.usageMetadata?.cachedContentTokenCount ??
-        null;
       const { perTool, total } = tallyToolCalls(e.steps);
       const lastMessageId =
         e.response?.messages?.[e.response.messages.length - 1]?.id ?? null;
@@ -122,7 +92,6 @@ export async function POST(req: Request) {
         tool_calls: perTool,
         tool_call_total: total,
         response_text_chars: responseTextCharCount(e.response),
-        cached_input_tokens: cachedTokens,
         error: null,
       });
     },
@@ -154,7 +123,6 @@ export async function POST(req: Request) {
         tool_calls: {},
         tool_call_total: 0,
         response_text_chars: null,
-        cached_input_tokens: null,
         error: message,
       }).catch(() => undefined);
       return message;
