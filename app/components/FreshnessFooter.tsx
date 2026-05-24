@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-function fmtDate(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString().slice(0, 10);
-}
+import { toIsoDate } from "@/app/lib/export/date";
 
 export function FreshnessFooter() {
   const [refreshed, setRefreshed] = useState<string | null>(null);
@@ -32,7 +26,7 @@ export function FreshnessFooter() {
   }, []);
 
   if (!loaded) return null;
-  const date = fmtDate(refreshed);
+  const date = toIsoDate(refreshed);
   return (
     <div className="text-[10px] text-foreground-faint mt-2 text-center">
       {date

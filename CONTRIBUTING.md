@@ -83,13 +83,23 @@ ADRs are **part of the PR**, not a follow-up. If you're introducing a decision w
 - React: function components. `'use client'` only where the component genuinely needs the browser.
 - Default to writing no comments. Add a comment when the *why* is non-obvious — a workaround for a third-party bug, a non-obvious invariant. Don't restate what the code already says.
 - Don't add error handling, fallbacks, or validation for scenarios that can't happen. Only validate at system boundaries (user input, external APIs, LLM tool inputs).
+- Imports inside `app/` use the `@/` alias. Parent-relative imports (`../...`) are reserved for files under `__tests__/` and are flagged by ESLint elsewhere.
+- Date stamps in exports, the freshness footer, and any "as of today" string go through `app/lib/export/date.ts` (`todayIsoDate()` / `toIsoDate(iso)`). Don't inline `new Date().toISOString().slice(0, 10)`.
 
 ### LLM-facing surfaces
 
 If your change touches the system prompt or the tool schemas / descriptions:
 
 - Treat the prompt and the tool description text as **production strings** the model reads to decide what to do. Test that Gemini still uses the tools correctly after your change.
-- Tool input schemas need to round-trip through Google's OpenAPI conversion. Stick to plain Zod types; nested `z.record(...)` schemas have been observed to cause Gemini to mangle keys. See ADR 0001 and the inline comment in `app/lib/tools/index.ts`.
+- The system prompt body (`app/lib/prompts/system.ts`) is a versioned contract — see [ADR 0004](docs/decisions/0004-system-prompt-contract.md). Any change to the prompt updates that ADR with one bullet per rule changed.
+- Tool input schemas need to round-trip through Google's OpenAPI conversion. Stick to plain Zod types; nested `z.record(...)` schemas have been observed to cause Gemini to mangle keys. See [ADR 0001](docs/decisions/0001-render-chart-payload.md) and the inline comment in `app/lib/tools/index.ts`.
+
+### Turn-log telemetry
+
+If your change touches `app/lib/turn-log.ts`, `app/api/chat/route.ts`, or the JSONL written to `turns.log`:
+
+- The event shape is a contract with the downstream Vector → ClickHouse ingest. See [ADR 0003](docs/decisions/0003-turn-log-schema.md).
+- Adding a nullable field is safe. Renaming or removing a field is coordinated with the deploy side and noted in the ADR.
 
 ### Mock data
 

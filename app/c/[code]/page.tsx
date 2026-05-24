@@ -8,7 +8,9 @@ import {
   type SessionRow,
 } from "@/app/lib/sessions";
 import { StaticTranscript } from "@/app/components/MessageView";
+import { toIsoDate } from "@/app/lib/export/date";
 import { ForkButton } from "./ForkButton";
+import { ShareViewBeacon } from "./ShareViewBeacon";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +77,7 @@ export default async function SharedConversationPage({
 
   return (
     <div className="grid h-full grid-rows-[auto_1fr] bg-background text-foreground">
+      <ShareViewBeacon />
       {!embed && <SharedHeader row={row} code={code} />}
       <main className="overflow-y-auto scroll-smooth">
         <div className="mx-auto w-full max-w-3xl px-5 py-10 flex flex-col gap-6">
@@ -84,8 +87,8 @@ export default async function SharedConversationPage({
           />
           {!embed && (
             <div className="text-[10px] text-foreground-faint mt-2 text-center">
-              {row.data_refreshed_at_max
-                ? `Data last refreshed ${new Date(row.data_refreshed_at_max).toISOString().slice(0, 10)} (UTC).`
+              {toIsoDate(row.data_refreshed_at_max)
+                ? `Data last refreshed ${toIsoDate(row.data_refreshed_at_max)} (UTC).`
                 : "Data refresh timestamp unavailable."}
             </div>
           )}

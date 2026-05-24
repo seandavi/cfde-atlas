@@ -8,7 +8,10 @@ import {
   exportPlainText,
   exportDocx,
   exportPdf,
-} from "../lib/export";
+} from "@/app/lib/export";
+import { trackExportClicked } from "@/app/lib/analytics";
+
+type ExportKey = "copy" | "md" | "txt" | "docx" | "pdf";
 
 type Props = {
   messages: readonly UIMessage[];
@@ -16,14 +19,14 @@ type Props = {
 };
 
 type Action = {
-  key: string;
+  key: ExportKey;
   label: string;
   run: () => Promise<void> | void;
 };
 
 export default function ExportBar({ messages, message }: Props) {
   const ctx = { messages, message };
-  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [busyKey, setBusyKey] = useState<ExportKey | null>(null);
   const [copied, setCopied] = useState(false);
 
   const actions: Action[] = [
@@ -53,6 +56,7 @@ export default function ExportBar({ messages, message }: Props) {
             type="button"
             disabled={busyKey !== null}
             onClick={async () => {
+              trackExportClicked({ format: action.key });
               setBusyKey(action.key);
               try {
                 await action.run();

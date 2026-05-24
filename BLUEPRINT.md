@@ -152,6 +152,7 @@ Prompt template lives in `app/lib/prompts/system.ts` (or wherever the AI SDK's c
 - **GA scraping is fragile.** GA4 API changes break things. Keep the scraper isolated and well-tested.
 - **Council of Councils prep is bursty.** Expect a spike in usage one to four weeks before the meeting. Make sure the deploy can scale (Vercel autoscale handles this; if self-hosted, plan for it).
 - **"Wrong numbers in NIH briefings" risk.** Add a footer to every chat response: "All numbers reflect ETL last-refreshed at YYYY-MM-DD. Verify against source systems before citing in official materials."
+- **GA4 event payloads are a privacy boundary.** All custom events are emitted through `app/lib/analytics.ts` and may carry only lengths, counts, tool names, export formats, and web-vital metric values. Never prompt text, never assistant response text, never tool inputs/outputs, never query result rows or cell values. A program officer's question about a specific CFDE program can contain unpublished numbers — those must stay in our event stream (Postgres `chat.sessions`), not Google's infrastructure. Privacy audit is `grep -n sendGAEvent app/lib/analytics.ts` plus call-site review for the eight `track*` helpers.
 
 ---
 

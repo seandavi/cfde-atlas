@@ -1,11 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { isToolUIPart, type DynamicToolUIPart, type ToolUIPart } from "ai";
+import { isToolUIPart } from "ai";
 
 import { CopyButton } from "./CopyButton";
+import { toolNameOf, type ToolPart } from "@/app/lib/tools/part-name";
+import { trackChartRendered } from "@/app/lib/analytics";
+
+export { toolNameOf, type ToolPart };
 
 const VegaChart = dynamic(() => import("./VegaChart"), {
   ssr: false,
@@ -68,8 +73,6 @@ function extractMermaidSource(children: unknown): string | null {
   if (!/(^|\s)language-mermaid(\s|$)/.test(found.className)) return null;
   return extractCodeText(found.raw).replace(/\n$/, "");
 }
-
-export type ToolPart = ToolUIPart | DynamicToolUIPart;
 
 /* ---------------- Markdown ---------------- */
 
@@ -194,14 +197,23 @@ export function ChartFromTool({ part }: { part: ToolPart }) {
   if (toolNameOf(part) !== "render_chart") return null;
   if (part.state !== "output-available") return null;
   if (!isChartOutput(part.output)) return null;
+  return <Chart spec={part.output.vega_lite_spec} title={part.output.title} />;
+}
+
+function Chart({ spec, title }: { spec: unknown; title?: string }) {
+  // Fires once per spec — re-renders during streaming reuse the same
+  // identity, so the dependency keeps the count honest.
+  useEffect(() => {
+    trackChartRendered();
+  }, [spec]);
   return (
     <figure className="my-1 rounded-lg border border-border bg-surface p-4">
-      {part.output.title && (
+      {title && (
         <figcaption className="text-sm font-medium mb-3 text-foreground">
-          {part.output.title}
+          {title}
         </figcaption>
       )}
-      <VegaChart spec={part.output.vega_lite_spec} />
+      <VegaChart spec={spec} />
     </figure>
   );
 }
@@ -232,7 +244,7 @@ export function CompletedTrail({ toolParts }: { toolParts: ToolPart[] }) {
   );
 }
 
-export function Chevron() {
+function Chevron() {
   return (
     <svg
       width="10"
@@ -291,12 +303,6 @@ function PreBlock({ label, value }: { label: string; value: unknown }) {
       </pre>
     </div>
   );
-}
-
-export function toolNameOf(part: ToolPart): string {
-  return part.type === "dynamic-tool"
-    ? part.toolName
-    : part.type.replace(/^tool-/, "");
 }
 
 /* ---------------- Whole-message rendering ---------------- */

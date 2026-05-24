@@ -19,6 +19,7 @@
   "dependencies": {
     "@ai-sdk/google": "^3.0.78",
     "@ai-sdk/react": "^3.0.190",
+    "@next/third-parties": "^16.2.6",
     "ai": "^6.0.188",
     "docx": "^9.6.1",
     "mermaid": "^11.15.0",

@@ -13,6 +13,27 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Ban parent-relative imports in non-test code. The @/ alias covers
+  // every source path; reach-up imports are a drift smell. Test files
+  // under __tests__ keep relative imports for locality.
+  {
+    files: ["app/**/*.{ts,tsx}"],
+    ignores: ["app/**/__tests__/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["../*"],
+              message:
+                "Use the '@/' alias instead of parent-relative imports outside __tests__.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

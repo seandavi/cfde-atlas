@@ -53,6 +53,7 @@ Open [http://localhost:3000](http://localhost:3000) and try one of the seeded pr
 |---|---|---|
 | `GOOGLE_GENERATIVE_AI_API_KEY` | yes | Gemini API access via `@ai-sdk/google`. |
 | `DATABASE_URL` | not yet | Postgres connection. Wiring tracked in the open issues. |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | no | Google Analytics 4 measurement ID (e.g. `G-XXXXXXXXXX`). Unset → no GA script loads and all GA event helpers no-op. Privacy posture: lengths/counts/tool-names only — never prompt or response text. See [BLUEPRINT.md](BLUEPRINT.md) §Gotchas. |
 
 ---
 
