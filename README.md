@@ -2,7 +2,7 @@
 
 > A conversational lens on Common Fund Data Ecosystem (CFDE) work products and impact — bibliometrics, grants, code activity, and web analytics — keyed by NIH core project number.
 
-Surfaces the outputs and downstream reach of CFDE-funded work without requiring SQL or notebooks. The deliverable is tables and figures; the chat surface is the means, not the artifact.
+Surfaces the outputs and downstream reach of CFDE-funded work without requiring SQL or notebooks. **The deliverable is not just data, but intelligence and knowledge** — tables, figures, and the synthesis that turns them into answers.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
