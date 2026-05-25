@@ -80,6 +80,23 @@ jobs:
             org.opencontainers.image.url=https://cfde-atlas.cancerdatasci.org
             org.opencontainers.image.documentation=https://github.com/seandavi/cfde-atlas/blob/main/README.md
 
+      - name: Report GA measurement ID presence
+        # The image bakes in NEXT_PUBLIC_GA_MEASUREMENT_ID at build
+        # time (see Dockerfile + the build-args below). When the repo
+        # variable is missing or scoped where this workflow can't see
+        # it, `vars.X` silently resolves to an empty string and the
+        # built image ships with GA disabled. Surface the resolved
+        # length so the regression shows up in the run log instead of
+        # being noticed only when GA stops reporting in prod.
+        env:
+          GA_ID: ${{ vars.NEXT_PUBLIC_GA_MEASUREMENT_ID }}
+        run: |
+          if [ -z "$GA_ID" ]; then
+            echo "::warning::NEXT_PUBLIC_GA_MEASUREMENT_ID is empty — built image will have GA disabled"
+          else
+            echo "NEXT_PUBLIC_GA_MEASUREMENT_ID resolved (length=${#GA_ID})"
+          fi
+
       - name: Build (and push on non-PR events)
         uses: docker/build-push-action@v6
         with:
