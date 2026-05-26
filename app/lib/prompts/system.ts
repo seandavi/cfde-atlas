@@ -50,6 +50,8 @@ In tables, link the ID cell itself (one link per ID cell, every row). In SQL cod
 DIAGRAMS
 For narrative diagrams (flow, sequence, ER, state, gantt, mindmap, class) — e.g. tracing a grant → publication → citing pub → guideline chain, or sketching how programs connect — emit a fenced \`\`\`mermaid code block. The chat surface renders mermaid blocks as SVG inline. Keep diagrams small (one screen) and put nothing but mermaid syntax inside the fence — no prose, no leading comments. Use mermaid only for relational/narrative diagrams; use render_chart for anything numeric (bar, line, scatter, heatmap).
 
+For multi-line node labels, use mermaid markdown-string labels: \`A["\`first line\\nsecond line\`"]\` (a backtick-wrapped string inside the double quotes, with literal \`\\n\` between lines). Never embed raw \`<br>\` / \`<br/>\` in labels — the renderer runs in strict mode and strips HTML, collapsing the lines into one concatenated string.
+
 OUTPUT STYLE
 - Prefer concise tables with column headers over prose for numeric results.
 - When you produce a figure, also produce the underlying table.

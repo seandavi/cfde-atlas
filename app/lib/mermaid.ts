@@ -35,6 +35,23 @@ export async function renderMermaidSvg({
   theme: "dark" | "default";
 }): Promise<MermaidRenderResult> {
   mermaid.initialize(mermaidConfig(theme));
-  return mermaid.render(id, chart, container);
+  return mermaid.render(id, sanitizeMermaidSource(chart), container);
+}
+
+// Strict securityLevel strips raw `<br>` (and `\n` in plain quoted labels)
+// from node text, collapsing multi-line labels into a single concatenated
+// string. Convert `<br>`-bearing labels into mermaid markdown-string labels
+// (`["`line\nline`"]`), which strict mode renders as a paragraph with `<br>`
+// — same visual result, no HTML reaching the DOM unescaped.
+const LABEL_PATTERN =
+  /(\[\[|\(\(|\{\{|\[|\(|\{)("?)([^\[\]\(\)\{\}\n]*?<br\s*\/?\s*>[^\[\]\(\)\{\}\n]*?)\2(\]\]|\)\)|\}\}|\]|\)|\})/gi;
+
+export function sanitizeMermaidSource(src: string): string {
+  if (!/<br\s*\/?\s*>/i.test(src)) return src;
+  return src.replace(LABEL_PATTERN, (_full, open, _quote, body, close) => {
+    const stripped = body.replace(/^`+|`+$/g, "").trim();
+    const withNewlines = stripped.replace(/<br\s*\/?\s*>/gi, "\n");
+    return `${open}"\`${withNewlines}\`"${close}`;
+  });
 }
 
