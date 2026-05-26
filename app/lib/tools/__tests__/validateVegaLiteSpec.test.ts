@@ -107,4 +107,89 @@ describe("validateVegaLiteSpec", () => {
     spec.encoding.y.field = "missing_field";
     expectRejection(spec, 'field "missing_field"');
   });
+
+  it("rejects bar mark combined with a log scale on a positional channel", () => {
+    // The HuBMAP-footprint regression: bars + log x renders empty axes.
+    const spec = {
+      mark: "bar",
+      data: {
+        values: [
+          { assay: "CODEX", files: 9_775_039 },
+          { assay: "DESI-MS", files: 413 },
+        ],
+      },
+      encoding: {
+        x: {
+          type: "quantitative",
+          field: "files",
+          scale: { type: "log" },
+        },
+        y: { type: "nominal", field: "assay" },
+      },
+    };
+    expectRejection(spec, "log scale");
+  });
+
+  it("rejects area mark combined with a symlog scale on y", () => {
+    const spec = {
+      mark: "area",
+      data: { values: [{ t: 1, v: 10 }, { t: 2, v: 100 }] },
+      encoding: {
+        x: { type: "quantitative", field: "t" },
+        y: {
+          type: "quantitative",
+          field: "v",
+          scale: { type: "symlog" },
+        },
+      },
+    };
+    expectRejection(spec, "symlog scale");
+  });
+
+  it("accepts bar mark with a log scale when an explicit x2 baseline is supplied", () => {
+    const spec = {
+      mark: "bar",
+      data: {
+        values: [
+          { assay: "CODEX", lo: 1, files: 9_775_039 },
+          { assay: "DESI-MS", lo: 1, files: 413 },
+        ],
+      },
+      encoding: {
+        x: {
+          type: "quantitative",
+          field: "lo",
+          scale: { type: "log" },
+        },
+        x2: { field: "files" },
+        y: { type: "nominal", field: "assay" },
+      },
+    };
+    expectOk(spec, 2);
+  });
+
+  it("accepts point mark with a log scale on x", () => {
+    const spec = {
+      mark: "point",
+      data: {
+        values: [
+          { assay: "CODEX", files: 9_775_039 },
+          { assay: "DESI-MS", files: 413 },
+        ],
+      },
+      encoding: {
+        x: {
+          type: "quantitative",
+          field: "files",
+          scale: { type: "log" },
+        },
+        y: { type: "nominal", field: "assay" },
+      },
+    };
+    expectOk(spec, 2);
+  });
+
+  it("accepts bar mark with a linear scale", () => {
+    expectOk(validSpec(), 2);
+  });
 });

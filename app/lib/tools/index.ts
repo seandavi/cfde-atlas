@@ -230,9 +230,45 @@ export function validateVegaLiteSpec(
         };
       }
     }
+
+    // bar/area marks need a zero baseline on their positional channels.
+    // Log/symlog/pow/sqrt scales have no zero, so Vega-Lite silently drops
+    // the bars and the chart renders with just axes. Catch the combination
+    // here unless the spec supplies an explicit x2/y2 baseline.
+    const baselineMarks = new Set(["bar", "area"]);
+    const nonZeroScales = new Set(["log", "symlog", "pow", "sqrt"]);
+    const markName = extractMarkName(s.mark);
+    if (markName && baselineMarks.has(markName)) {
+      const enc = encoding as Record<string, unknown>;
+      for (const channel of ["x", "y"] as const) {
+        const channelDef = enc[channel];
+        if (!channelDef || typeof channelDef !== "object") continue;
+        const scale = (channelDef as Record<string, unknown>).scale;
+        if (!scale || typeof scale !== "object") continue;
+        const scaleType = (scale as Record<string, unknown>).type;
+        if (typeof scaleType !== "string" || !nonZeroScales.has(scaleType)) {
+          continue;
+        }
+        const baselineChannel = `${channel}2`;
+        if (baselineChannel in enc) continue;
+        return {
+          ok: false,
+          reason: `mark "${markName}" cannot be combined with a ${scaleType} scale on encoding.${channel} — bars/areas need a zero baseline and ${scaleType} scales have no zero. Use mark "point" or "circle" with the log scale, switch encoding.${channel} to a linear scale (top-N or aggregate the long tail), or provide an explicit encoding.${baselineChannel} baseline.`,
+        };
+      }
+    }
   }
 
   return { ok: true, rowCount: values.length };
+}
+
+function extractMarkName(mark: unknown): string | null {
+  if (typeof mark === "string") return mark;
+  if (mark && typeof mark === "object" && !Array.isArray(mark)) {
+    const t = (mark as Record<string, unknown>).type;
+    if (typeof t === "string") return t;
+  }
+  return null;
 }
 
 // ---------- SQL guard helpers ----------
