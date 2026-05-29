@@ -55,7 +55,7 @@ Next.js (App Router)
   │    /api/chat       → @ai-sdk/google → gemini-3.5-flash
   │    /api/tools/*    → schema-introspection + query tools (LLM-callable)
   └─ Postgres access via postgres.js (or Drizzle if schema gets complex)
-       └─ pg_ducklake escape hatch if analytical workloads emerge
+       └─ pg_duckdb escape hatch if analytical workloads emerge
 
 Deploy: Vercel or Netlify (single deploy, no Python sidecar)
 ```
@@ -132,7 +132,7 @@ Prompt template lives in `app/lib/prompts/system.ts` (or wherever the AI SDK's c
 - `DATABASE_URL` — Postgres connection string
 - `(future)` `ORCID_CLIENT_ID` + `ORCID_CLIENT_SECRET` if auth lights up
 
-**Backing Postgres:** plain Postgres 18 on `pg_ducklake_18` (onclappc02), reached via the `pg_ducklake_stack_default` docker bridge. Specifically NOT `pg_duckdb_18` — pg_duckdb's planner hooks would interfere with the LLM-driven `run_query` path. ETL writes via `cfde-atlas-etl`; the app holds a SELECT-only connection pinned to `search_path = analytics, public`.
+**Backing Postgres:** plain Postgres 18 on `pg_main` (onclappc02), reached via the `pg_main_stack_default` docker bridge. The app database (`cfde_atlas_dev`) intentionally does NOT have the `pg_duckdb` extension installed — pg_duckdb's planner hooks would interfere with the LLM-driven `run_query` path. ETL writes via `cfde-atlas-etl`; the app holds a SELECT-only connection pinned to `search_path = analytics, public`.
 
 ---
 
@@ -163,7 +163,7 @@ Prompt template lives in `app/lib/prompts/system.ts` (or wherever the AI SDK's c
 - How fresh does the data need to be? (Council of Councils is annual — daily refresh is overkill; weekly is probably enough.)
 
 Resolved:
-- ~~Which Postgres host?~~ pg_ducklake_18 on onclappc02 (see Architecture).
+- ~~Which Postgres host?~~ pg_main on onclappc02 (see Architecture).
 - ~~Where does the deployed app live?~~ `cfde-atlas.cancerdatasci.org`, behind the shared Traefik on onclappc02. Wiring in `deploy`.
 
 These get answered as we build, not before.
