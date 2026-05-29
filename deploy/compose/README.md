@@ -2,7 +2,7 @@
 
 This directory holds the production docker-compose wiring for cfde-atlas. It lives in the app repo (rather than in [`monode`](https://github.com/seandavi/monode)) so a code change and its deployment change ship in the same PR.
 
-monode still owns the *shared* infra that this compose file consumes — Traefik, the `proxy` and `pg_ducklake_stack_default` networks, the Vector container that tails this app's telemetry, the ClickHouse table the telemetry lands in, and the GCP terraform that manages the DNS record + uptime check. Anything mono-app stays here; anything genuinely shared stays in monode.
+monode still owns the *shared* infra that this compose file consumes — Traefik, the `proxy` and `pg_main_stack_default` networks, the Vector container that tails this app's telemetry, the ClickHouse table the telemetry lands in, and the GCP terraform that manages the DNS record + uptime check. Anything mono-app stays here; anything genuinely shared stays in monode.
 
 ## What this provides
 
@@ -25,7 +25,7 @@ cp .env.example .env
 # (DATABASE_URL password lives in GSM — see .env.example for the gcloud invocation.)
 
 # 3. Ensure shared infra is up (monode owns these)
-docker network ls | grep -E 'proxy|pg_ducklake_stack_default'
+docker network ls | grep -E 'proxy|pg_main_stack_default'
 
 # 4. Create the telemetry log directory (owned by the container's uid)
 sudo install -d -o 1001 -g 1001 /data/davsean/cfde_atlas_logs
