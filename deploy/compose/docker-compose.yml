@@ -6,7 +6,7 @@
 #   - Joins `proxy` (external, managed by Traefik in monode/) so the
 #     Traefik labels below take effect.
 #   - Joins `pg_ducklake_stack_default` (external, also monode/) so the
-#     container can reach `pg_ducklake_18` over the docker bridge by
+#     container can reach `pg_main` over the docker bridge by
 #     name (DATABASE_URL).
 #
 # Environment:
@@ -41,7 +41,7 @@ services:
     environment:
       # Gemini API access — required. See .env.example.
       GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:?GOOGLE_GENERATIVE_AI_API_KEY must be set in .env}
-      # Postgres connection — required. Resolves `pg_ducklake_18` over the
+      # Postgres connection — required. Resolves `pg_main` over the
       # `pg_ducklake_stack_default` docker bridge below. Password sourced
       # from GSM (cdsci-infra / cfde-atlas-dev-db-password-onclappc02).
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in .env}
