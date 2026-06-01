@@ -141,7 +141,62 @@ Prompt template lives in `app/lib/prompts/system.ts` (or wherever the AI SDK's c
 - Not a dashboard. Dashboards are for fixed questions; this is for ad hoc ones.
 - Not a replacement for `icc-eval-core`. That's the data layer; this is the view.
 - Not a general-purpose CFDE chatbot. The audience is program officers, the use case is metrics. Scope creep ("can it also answer policy questions?") should be deflected.
-- Not a template. If a second instance is ever needed, fork this blueprint, not this scaffold.
+- Not a template. If a second instance is ever needed, fork this blueprint, not this scaffold. **(Revised — see "Extraction path" below.)**
+
+---
+
+## Extraction path (core package + template shell)
+
+The "not a template" line above was written before a second instance existed. Once `co-cancer-atlas` appeared with near-identical functionality, the cost of that stance became visible: the same scaffold gets re-derived by hand, and bug fixes do not propagate. PRs like the bar/area + log-scale rejection (#71/#72) and the mermaid `<br>` sanitizer (#73/#74) each had to be reasoned out once; in a fork-and-diverge world they would have to be ported by hand into every instance, silently, with no signal when they drift.
+
+The stance is therefore revised, but only partially. The right split is **hybrid**: a framework-agnostic core package plus a thin, forkable Next.js shell. The blueprint was right that the *domain framing* and *data model* don't transfer; it underestimated how much value lives in the generic plumbing.
+
+### Why the seam is clean
+
+Most of the hard-won code carries zero CFDE in it:
+
+- `enforceSelectOnly` — the SQL safety guard.
+- `validateVegaLiteSpec` — including the bar/area + log-scale rejection.
+- The mermaid `<br>` / strict-mode label sanitizer.
+- Schema introspection via `pg_class` / `obj_description` / `col_description`.
+- `runSelect` — read-only transaction, `statement_timeout`, row cap.
+- The four tool *shapes*, export (docx/pdf/md/text), sessions, feedback, the freshness mechanism, the Vega/Mermaid React components.
+
+What's actually domain-specific is small: the system prompt's role/audience/keying-convention/honesty paragraphs, the ID→link resolver table, the schema name, the freshness source table, and branding. The surface is small because **the schema knowledge lives in Postgres comments, not in the app** — `describe_table` reads `obj_description`. The database carries the data model; the app carries almost none.
+
+### The coupling that drives the design
+
+The unit worth sharing is not "the code" loosely — it is **the contract: each tool's behavior rules and the validator that enforces them, versioned together.** PRs #71 and #73 each touched two places that must agree: a *prompt rule* ("never combine bar with a log scale") and a *runtime validator* that enforces it. In one repo they stay in sync for free. Across forks, that sync is silent and manual — fix the bug in one, forget the other, and a chart renders blank in a briefing before anyone notices. The core package exists so the prompt rule and its enforcing validator cannot drift apart.
+
+### The shape
+
+- **`@seandavi/sql-chat-core`** (framework-agnostic, no React, no Next): SQL guard, schema introspection, Vega validator, mermaid sanitizer, export, and a **tool factory** — a function that takes config and returns the AI SDK tool objects with their prompt-rule fragments attached. Trivial to test and publish; this is where the bug-prone, high-value code lives.
+- **Template shell** (forkable Next.js app): route wiring, RSC boundaries, components, layout — the stuff that is risky to package against a fast-moving Next. Depends on the core and supplies an `atlas.config.ts`.
+
+### Configuration (`atlas.config.ts` per instance)
+
+Config holds *what changes between instances*, never *how the chatbot behaves* — behavior lives in core so it can't drift.
+
+- **identity** — name, tagline, audience sentence, about-page copy, footer disclaimer.
+- **model** — provider + model id (gemini-3.5-flash vs claude-haiku is one line via the AI SDK), step budget.
+- **backend** — schema name, search_path, and a *freshness source* (table+column or custom query). `getDataRefreshedAt` currently hardcodes `analytics.publications` — the one piece of domain leakage in the otherwise-generic db layer; it becomes config.
+- **promptDomain** — only the domain paragraphs (role, keying convention, honesty framing). The tool-mechanics sections (render_chart rules, the bar/log warning, "never paste Vega as JSON", mermaid label rules, follow-up format) are supplied **by the core, next to the validators that enforce them.** The system prompt is composed: core fragments + instance fragments.
+- **idResolvers** — a list of `{ label, urlTemplate }`. Drives both the prompt's link table and client-side linkification.
+- **branding** — colors, logo.
+
+### Generalizing past SQL
+
+The three-verb tool shape — `list_tables` / `describe_table` / `run_query` — is really **discover / inspect / execute**, and that generalizes past Postgres: a REST API, a SPARQL endpoint, a directory of parquet files all answer the same three verbs. The clean abstraction is a **data-adapter interface** — core owns the tool shapes, the safety posture, and the validators; an adapter implements discover/describe/execute for a given backend. Postgres is adapter #1.
+
+### Sequencing (don't over-build)
+
+Two instances is the right time to extract (rule of three: enough to see what's common, not so many that forks have calcified). But start cheap:
+
+1. Pull the pure-logic files (`enforceSelectOnly`, `validateVegaLiteSpec`, mermaid sanitizer, schema introspection, export) into a tiny shared package.
+2. Fix the `analytics.publications` freshness hardcode.
+3. Write a short porting checklist.
+
+Grow the adapter interface and prompt composition later, once the second instance has shown which seams actually move. The blueprint itself stays the per-instance fill-in-the-blanks: the *shell* is a template, the *logic* is a package, the *blueprint* is the design doc you re-answer per instance.
 
 ---
 
