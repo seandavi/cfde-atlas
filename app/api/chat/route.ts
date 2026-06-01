@@ -10,6 +10,7 @@ import { google } from "@ai-sdk/google";
 import { buildSystemPrompt } from "@/app/lib/prompts/system";
 import { sessionCookieName } from "@/app/lib/sessions";
 import { cfdeTools } from "@/app/lib/tools";
+import { getCachedSchemaDigest } from "@/app/lib/tools/schema";
 import {
   appendTurnEvent,
   responseTextCharCount,
@@ -68,9 +69,20 @@ export async function POST(req: Request) {
   // event (usage, steps, finishReason) with the UI-level UIMessage id.
   let finishCapture: FinishCapture | null = null;
 
+  // Cached per-process schema digest, inlined into the system prompt so the
+  // model can skip the list_tables/describe_table discovery round-trips. On
+  // introspection failure, fall back to an empty digest — the prompt then
+  // keeps its discover-first guidance and the backup tools stay available.
+  let schemaDigest = "";
+  try {
+    schemaDigest = await getCachedSchemaDigest();
+  } catch {
+    schemaDigest = "";
+  }
+
   const result = streamText({
     model: google(MODEL_ID),
-    system: buildSystemPrompt({ maxSteps: MAX_STEPS }),
+    system: buildSystemPrompt({ maxSteps: MAX_STEPS, schemaDigest }),
     messages: await convertToModelMessages(messages),
     tools: cfdeTools,
     stopWhen: stepCountIs(MAX_STEPS),

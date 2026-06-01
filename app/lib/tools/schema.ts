@@ -148,3 +148,101 @@ export async function getDataRefreshedAt(): Promise<string | null> {
     return null;
   }
 }
+
+// ---------- Static schema digest ----------
+//
+// The same metadata describe_table surfaces at runtime (table list +
+// column-level schema, sourced from Postgres comments), formatted as a
+// compact text block for injection into the system prompt. The schema is
+// small and changes only on ETL deploys, so we hoist discovery out of the
+// per-turn tool loop. NO live sample rows: those can carry unpublished
+// values (see BLUEPRINT §privacy), and baking a real row into the prompt is
+// a different exposure than returning one to the model on demand. The backup
+// describe_table tool still provides a live sample row when asked.
+
+export type DigestColumn = {
+  table_name: string;
+  name: string;
+  type: string;
+  notes: string | null;
+  nullable: boolean;
+};
+
+/**
+ * Format the table list + columns into the AVAILABLE SCHEMA block. Pure
+ * (no I/O) so it can be unit-tested without a database.
+ */
+export function formatSchemaDigest(
+  tables: AnalyticsTable[],
+  columns: DigestColumn[],
+): string {
+  if (tables.length === 0) return "";
+
+  const byTable = new Map<string, DigestColumn[]>();
+  for (const col of columns) {
+    const list = byTable.get(col.table_name) ?? [];
+    list.push(col);
+    byTable.set(col.table_name, list);
+  }
+
+  const blocks = tables.map((t) => {
+    const header = `### ${t.name} — ${t.kind}${
+      t.description ? `\n${t.description}` : ""
+    }`;
+    const cols = byTable.get(t.name) ?? [];
+    const lines = cols.map((c) => {
+      const nullable = c.nullable ? "" : " NOT NULL";
+      const notes = c.notes ? ` — ${c.notes}` : "";
+      return `- ${c.name}: ${c.type}${nullable}${notes}`;
+    });
+    return [header, ...lines].join("\n");
+  });
+
+  return blocks.join("\n\n");
+}
+
+/**
+ * Introspect the analytics schema and build the digest string. One query
+ * for tables, one for all columns — no per-table round-trips, no sample
+ * rows, no row counts.
+ */
+export async function buildSchemaDigest(): Promise<string> {
+  const tables = await listAnalyticsTables();
+  if (tables.length === 0) return "";
+
+  const sql = getSql();
+  const columns = await sql<DigestColumn[]>`
+    SELECT
+      c.relname AS table_name,
+      a.attname AS name,
+      pg_catalog.format_type(a.atttypid, a.atttypmod) AS type,
+      col_description(a.attrelid, a.attnum) AS notes,
+      NOT a.attnotnull AS nullable
+    FROM pg_attribute a
+    JOIN pg_class c ON c.oid = a.attrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = ${ANALYTICS_SCHEMA}
+      AND a.attnum > 0
+      AND NOT a.attisdropped
+      AND c.relkind IN ('r', 'v', 'm')
+    ORDER BY c.relname, a.attnum
+  `;
+
+  return formatSchemaDigest(tables, columns);
+}
+
+// Cache the digest for the life of the process. Next.js dev HMR reloads
+// modules, so hoist onto globalThis like the SQL client does. Only successes
+// are cached — a transient introspection failure falls through to the prompt
+// fallback (and the backup tools) without permanently disabling the digest.
+declare global {
+  // eslint-disable-next-line no-var
+  var __cfde_atlas_schema_digest: string | undefined;
+}
+
+export async function getCachedSchemaDigest(): Promise<string> {
+  if (globalThis.__cfde_atlas_schema_digest === undefined) {
+    globalThis.__cfde_atlas_schema_digest = await buildSchemaDigest();
+  }
+  return globalThis.__cfde_atlas_schema_digest;
+}
