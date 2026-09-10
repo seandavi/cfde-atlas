@@ -1,0 +1,239 @@
+{
+  "by_year": [
+    {
+      "Awardee": 2,
+      "Broader.Influence": 70,
+      "User": 10,
+      "year": 2019
+    },
+    {
+      "Awardee": 1,
+      "Broader.Influence": 178,
+      "User": 17,
+      "year": 2020
+    },
+    {
+      "Awardee": 8,
+      "Broader.Influence": 353,
+      "User": 25,
+      "year": 2021
+    },
+    {
+      "Awardee": 53,
+      "Broader.Influence": 444,
+      "User": 28,
+      "year": 2022
+    },
+    {
+      "Awardee": 68,
+      "Broader.Influence": 728,
+      "User": 32,
+      "year": 2023
+    },
+    {
+      "Awardee": 94,
+      "Broader.Influence": 1254,
+      "User": 20,
+      "year": 2024
+    },
+    {
+      "Awardee": 146,
+      "Broader.Influence": 2780,
+      "User": 22,
+      "year": 2025
+    },
+    {
+      "Awardee": 105,
+      "Broader.Influence": 3002,
+      "User": 20,
+      "year": 2026
+    }
+  ],
+  "clusters": [
+    {
+      "cluster": "Cites_Awardee_Paper",
+      "impact_category": "Broader.Influence",
+      "papers": 10768,
+      "papers_excl_preprints": 8936,
+      "pmids": 8936,
+      "query_count": 446
+    },
+    {
+      "cluster": "Data_Resource_Identifier",
+      "impact_category": "User",
+      "papers": 11,
+      "papers_excl_preprints": 9,
+      "pmids": 9,
+      "query_count": 13
+    },
+    {
+      "cluster": "Grant_Title",
+      "impact_category": "User",
+      "papers": 232,
+      "papers_excl_preprints": 223,
+      "pmids": 220,
+      "query_count": 34
+    },
+    {
+      "cluster": "OT2",
+      "impact_category": "Awardee",
+      "papers": 267,
+      "papers_excl_preprints": 259,
+      "pmids": 258,
+      "query_count": 16
+    },
+    {
+      "cluster": "Program_Name",
+      "impact_category": "Broader.Influence",
+      "papers": 105,
+      "papers_excl_preprints": 98,
+      "pmids": 96,
+      "query_count": 7
+    },
+    {
+      "cluster": "R03",
+      "impact_category": "Awardee",
+      "papers": 171,
+      "papers_excl_preprints": 160,
+      "pmids": 160,
+      "query_count": 63
+    },
+    {
+      "cluster": "R25",
+      "impact_category": "Awardee",
+      "papers": 14,
+      "papers_excl_preprints": 14,
+      "pmids": 14,
+      "query_count": 4
+    },
+    {
+      "cluster": "U24",
+      "impact_category": "Awardee",
+      "papers": 22,
+      "papers_excl_preprints": 20,
+      "pmids": 19,
+      "query_count": 6
+    },
+    {
+      "cluster": "U54",
+      "impact_category": "Awardee",
+      "papers": 34,
+      "papers_excl_preprints": 32,
+      "pmids": 31,
+      "query_count": 2
+    }
+  ],
+  "notes": [
+    "top_journals and rcr cover 347 of 9454 papers with a PMID: only papers already in analytics.publications (typically Awardee papers) join."
+  ],
+  "overrides": {
+    "by_tier": {},
+    "count": 0
+  },
+  "rcr": {
+    "max": 540.0914724185059,
+    "median": 2.0013937075138486,
+    "n": 246,
+    "q1": 1.0247833588913293,
+    "q3": 4.316261213427273
+  },
+  "run": {
+    "date_window": [
+      2019,
+      2026
+    ],
+    "display_name": "Common Fund Data Ecosystem",
+    "finished_at": "2026-09-10T21:48:22.140452Z",
+    "hit_count": 11320,
+    "preprint_hits": 1860,
+    "program": "cfde",
+    "program_yaml_sha": "d50f8c8c9edab3bf4677e14cb27bbf780bee8fd7",
+    "query_count": 591,
+    "run_id": "cfde-20260910T213949-d50f8c8",
+    "started_at": "2026-09-10T21:39:50.031411Z",
+    "unique_pmids": 9454
+  },
+  "schema_version": 1,
+  "tiers": [
+    {
+      "papers": 499,
+      "papers_excl_preprints": 477,
+      "pmids": 474,
+      "tier": "Awardee"
+    },
+    {
+      "papers": 185,
+      "papers_excl_preprints": 174,
+      "pmids": 171,
+      "tier": "User"
+    },
+    {
+      "papers": 10636,
+      "papers_excl_preprints": 8809,
+      "pmids": 8809,
+      "tier": "Broader.Influence"
+    }
+  ],
+  "top_journals": [
+    {
+      "journal": "Nat Commun",
+      "papers": 22
+    },
+    {
+      "journal": "Nucleic Acids Res",
+      "papers": 14
+    },
+    {
+      "journal": "Cell Rep",
+      "papers": 9
+    },
+    {
+      "journal": "Nat Methods",
+      "papers": 8
+    },
+    {
+      "journal": "Nature",
+      "papers": 8
+    },
+    {
+      "journal": "Sci Data",
+      "papers": 7
+    },
+    {
+      "journal": "Sci Rep",
+      "papers": 6
+    },
+    {
+      "journal": "Bioinformatics",
+      "papers": 5
+    },
+    {
+      "journal": "Commun Biol",
+      "papers": 5
+    },
+    {
+      "journal": "Pain",
+      "papers": 5
+    },
+    {
+      "journal": "Cancers (Basel)",
+      "papers": 4
+    },
+    {
+      "journal": "Genome Res",
+      "papers": 4
+    },
+    {
+      "journal": "Gigascience",
+      "papers": 4
+    },
+    {
+      "journal": "iScience",
+      "papers": 4
+    },
+    {
+      "journal": "Anal Chem",
+      "papers": 3
+    }
+  ]
+}

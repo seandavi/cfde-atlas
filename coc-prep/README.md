@@ -37,6 +37,8 @@ query cluster). iCite metadata is joined in.
 | `20250910_Publication_Database_Script_input-template.xlsx` | Original input template (downloaded manually) |
 | `2026.04.24_PPST_KidsFirstoutput.xlsx` | Original Kids First output workbook (downloaded manually) |
 | `cfde_PPST_input_<date>.xlsx` | Generated PPST Script_Input workbook for CFDE (591 rows on 2026-09-10 data: 91 grants, 446 cites, 34 award-title terms, 16 curated, 4 DRC). Built by `cfde-atlas-etl`: `uv run python -m cfde_atlas_etl.pubsearch.build_input --program cfde`. Gitignored; regenerate. |
+| `cfde_PPST_output_<date>.xlsx` | Our PPST-shaped OUTPUT workbook for CFDE (Summary, Data_Tabular, Data_Matrixed_Query, Data_Matrixed_Cluster + evidence and run id), from `pubsearch.export_output --run-id <run>`. Gitignored. |
+| `cfde_pubsearch_summary_<date>.json` | Per-run summary JSON (tiers, clusters, by-year, journals, RCR) for the atlas report page, from `pubsearch.summary_json`. |
 | `DESIGN-publication-search.md` | Design note: reproducing the PPST tiers from ecosystem metadata via the Europe PMC API |
 
 Pipeline work lives in `seandavi/cfde-atlas-etl` under `docs/pubsearch/SPEC.md` and issues #53-62 (milestone 1 done 2026-09-10).
