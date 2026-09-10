@@ -43,3 +43,61 @@ whatever X01 numbers we are handed". This is specific to programs that make X01 
   previous tier's output. Reproduce that mechanically (RePORTER publications of the awardee
   cores) rather than by hand, and the 214 vs 195 difference is the X01 gap in the other
   direction.
+
+## RePORTER awardee set vs the Eval team's cited-paper list (214 vs 195)
+
+Overlap 166. The two lists are not nested.
+
+RePORTER-only, 48 papers:
+- 34 are preprints (medRxiv, bioRxiv, Research Square) that PubMed indexes under the NIH
+  preprint pilot and RePORTER links to the U2C/R03 awards. Europe PMC files preprints under
+  PPR ids, so PPST's `PMID_med` citation queries cannot see them at all. Topically they are
+  core Kids First work (neuroblastoma germline variants, orofacial cleft families, pediatric
+  brain tumour SVs, AutoGVP).
+- 13 are journal articles published before the April 2026 run that never mention Kids First
+  in title, abstract, or grant metadata. Several look like PI-level over-linking via My
+  Bibliography (gut microbiome / diabetes, prediabetes metabolomics on an R03).
+- 1 was published after the run.
+
+Eval-team-only, 29 papers:
+- 6 are RePORTER publications of the 13 user-tier R01s (citations of user papers chased as
+  if they were awardee papers).
+- 23 are not RePORTER-linked; grant metadata shows X01 numbers or Kids First-adjacent NIDCR
+  grants. These are the X01 gap.
+
+RePORTER over-recalls through PI-attached tangential papers and under-recalls on X01. Europe
+PMC grant search under-recalls on preprints and closed access and needs the X01 list supplied.
+Use the union, flag RePORTER-only journal articles for review, and decide explicitly whether
+preprints count: including them makes our awardee count visibly higher than the Eval team's.
+
+## What dropping X01 costs on Kids First
+
+X01 award numbers are not programmatically available for any program, so a reproducible
+pipeline will not have them. Recomputed from `Data_Matrixed_Query` in the real workbook with
+the 78 X01 queries removed (and, in the last column, also the 22 citation queries seeded from
+non-RePORTER papers):
+
+| Tier | Current | Without X01 | Without X01 + 22 X01-seeded cites |
+|---|---:|---:|---:|
+| Awardee | 243 | 193 | 193 |
+| User | 217 | 244 | 244 |
+| Broader Influence | 4473 | 4482 | 4271 |
+| Dropped entirely | 0 | 14 | 225 |
+
+- X01 queries hit 87 papers; 37 are also hit by R03/U24/U2C and stay Awardee. Of the other
+  50, 27 drop to User (portal / accession / program-name hit), 9 to Broader Influence, 14
+  vanish.
+- The 14 X01-only papers are mostly not Kids First science: COVID MIS-C papers, thrombotic
+  microangiopathy, hypertension after congenital heart surgery, an ESHG abstract book.
+  Investigators listing every grant in acknowledgements. Losing them costs nothing.
+- Downstream, 22 citation queries were seeded by papers only X01 surfaced; removing them
+  drops 210 Broader Influence papers (~5%), which is a precision gain in the weakest tier.
+- Net: RePORTER-only Awardee falls 21%, but 36 of the 50 stay in the dataset at a more
+  honest tier, and RePORTER adds 47 papers (34 preprints, 13 journal) the Eval team missed.
+  Awardee ends up ~240 either way, composed differently.
+
+Framing for the Council: X01 is a data-access award, not a research grant. Acknowledgement of
+an X01 number is a weak proxy that grant linkage never used anyway.
+
+Note on the workbook: `Broader_Influence` and `Final_Assignment` are blank for all 4473
+broader papers; the tool labels only Awardee and User explicitly, and blank means Broader.
