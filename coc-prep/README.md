@@ -36,7 +36,10 @@ query cluster). iCite metadata is joined in.
 | `2026.04.24_PPST_KidsFirstoutput.txt` | Text rendering of the Kids First output workbook: Summary sheet plus a truncated `Data_Matrixed_Query`. `Data_Tabular` did not survive the rendering |
 | `20250910_Publication_Database_Script_input-template.xlsx` | Original input template (downloaded manually) |
 | `2026.04.24_PPST_KidsFirstoutput.xlsx` | Original Kids First output workbook (downloaded manually) |
+| `cfde_PPST_input_<date>.xlsx` | Generated PPST Script_Input workbook for CFDE (514 rows: 91 grants, 403 cites, 16 curated, 4 DRC). Built by `cfde-atlas-etl`: `uv run python -m cfde_atlas_etl.pubsearch.build_input --program cfde`. Gitignored; regenerate. |
 | `DESIGN-publication-search.md` | Design note: reproducing the PPST tiers from ecosystem metadata via the Europe PMC API |
+
+Pipeline work lives in `seandavi/cfde-atlas-etl` under `docs/pubsearch/SPEC.md` and issues #53-62 (milestone 1 done 2026-09-10).
 
 ## Kids First 1.0 run at a glance (from the Summary sheet)
 
