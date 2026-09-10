@@ -1,0 +1,5 @@
+# Eval-team originals and Kids First data stay local for now (public data, but not ours to redistribute here)
+*.xlsx
+*.pptx
+2026.04.24_PPST_KidsFirstoutput.txt
+KidsFirst_Query_Summary.csv
