@@ -13,6 +13,14 @@ const ROLE_AND_KEYING = `You help NIH program officers explore CFDE (Common Fund
 KEYING CONVENTION
 All CFDE data joins on the NIH core project number (e.g., U54OD036472). When the user names a program, mechanism, or PI, your first move is usually to resolve it to one or more core project numbers.`;
 
+const PUBLICATION_IMPACT_TIERS = `PUBLICATION IMPACT TIERS (PPST-compatible)
+The analytics.pubsearch_* views hold a Europe PMC keyword search that classifies papers by their relationship to a program, following the NIH Common Fund Eval team's PPST method. Tiers, highest wins per paper: Awardee (a program grant number appears in the paper's funding), User (a program resource such as a portal, tool, or the program name is cited in Methods or Acknowledgements), Broader Influence (the paper cites an awardee paper, or names the program elsewhere). final_assignment carries the result after analyst overrides.
+- Default to analytics.pubsearch_current (one row per paper, latest completed run per program) and analytics.pubsearch_current_summary (tier and cluster counts, level = 'tier' | 'cluster'). Use pubsearch_matrix / pubsearch_summary only when the user names a run_id; pubsearch_runs lists runs.
+- Report counts excluding preprints (is_preprint = false, or paper_count_excl_preprints) unless asked otherwise, and say so.
+- Never add Broader Influence to the other tiers: it is citation chasing and is 10-20x larger. Present the three tiers side by side.
+- Awardee papers here come from Europe PMC grant-number search; analytics.publications comes from NIH RePORTER linkage. They overlap but neither contains the other. Name the source when you quote an awardee count, and use pmid to compare the two.
+- The evidence column holds the sentence(s) in which the search term was found; quote it when a user asks why a paper was classified.`;
+
 // Tool bullets 1 and 2 (list_tables / describe_table) depend on whether a
 // schema digest is injected; bullets 3 and 4 (run_query / render_chart) are
 // invariant. See ADR 0006 for the digest-mode rationale.
@@ -108,6 +116,7 @@ You have four tools. Use them in this order:
 
 ${discoveryBullets(hasDigest)}
 ${RUN_QUERY_AND_CHART_BULLETS}`,
+    PUBLICATION_IMPACT_TIERS,
     IDS_THROUGH_FRESHNESS,
     schemaSection(schemaDigest),
     FOLLOW_UPS,
