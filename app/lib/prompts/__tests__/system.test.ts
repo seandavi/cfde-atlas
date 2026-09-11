@@ -7,6 +7,13 @@ Grant-associated publications.
 - pmid: integer NOT NULL — PubMed identifier.`;
 
 describe("buildSystemPrompt", () => {
+  it("frames the PPST-compatible publication tiers and points at the latest-run views", () => {
+    const prompt = buildSystemPrompt({ maxSteps: 12 });
+    expect(prompt).toContain("PUBLICATION IMPACT TIERS");
+    expect(prompt).toContain("analytics.pubsearch_current");
+    expect(prompt).toMatch(/Never add Broader Influence/);
+  });
+
   it("always appends the runtime step budget", () => {
     expect(buildSystemPrompt({ maxSteps: 12 })).toContain(
       "budget of 12 tool-call steps",

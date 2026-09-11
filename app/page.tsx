@@ -44,6 +44,11 @@ const EXAMPLE_PROMPTS = [
     hint: "Joins publications across all CFDE programs.",
   },
   {
+    prompt:
+      "For the latest CFDE publication-impact run, how many papers are Awardee, User, and Broader Influence, excluding preprints?",
+    hint: "PPST-style tiers from the Europe PMC search (analytics.pubsearch_current_summary).",
+  },
+  {
     prompt: "Plot total FY2024 funding by CFDE program.",
     hint: "Produces a horizontal bar chart and the underlying table.",
   },
