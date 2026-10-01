@@ -5,7 +5,8 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import { WebVitalsBeacon } from "./components/WebVitalsBeacon";
 import "./globals.css";
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+// Consolidated "Sean Davis — web" GA4 property (public ID, hard-coded).
+const GA_ID = "G-KLLV1GCF4E";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,10 +35,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-full overflow-hidden">
-        {GA_ID && <WebVitalsBeacon />}
+        <WebVitalsBeacon />
         {children}
       </body>
-      {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
+      <GoogleAnalytics gaId={GA_ID} />
     </html>
   );
 }
