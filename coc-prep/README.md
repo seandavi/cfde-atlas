@@ -1,58 +1,8 @@
-# coc-prep: Council of Councils preparation
+# coc-prep (moved)
 
-Materials from Christy Kano (CFDE Program Officer), forwarded 2026-09-09 from her Eval team.
-Source folder: https://drive.google.com/drive/folders/13jqvXxM6VmBQPPJHlwSY6nyrbGCgc3AJ
+The Council of Councils prep material that lived here moved on 2026-10-08 to the private
+repository `seandavi/2027-cfde-coc-prep` (folder `publications/`), with its git history. It
+includes Eval-team originals and correspondence that should not be in a public repository.
 
-Christy's note: the first spreadsheet (`2026.04.24_...`) is an example the Eval team ran for the
-Kids First program; the second (`20250910_...`) is the input template; the pptx explains what the
-terms and fields in the spreadsheet mean and how they are used to generate the results.
-
-## What the tool is
-
-PPST = Program Publication Search Tool. An in-house, keyword-based Europe PMC search driven by an
-input spreadsheet. Each query row is a search term plus a paper section (Methods, Acknowledgements,
-Title/Abstract, Cites, References, ...). Where the term is found determines the publication's
-relationship to the program, with a strict hierarchy:
-
-| Impact category | Typical evidence |
-|---|---|
-| Awardee | Program grant number in Grants & Funding |
-| User | Method name, data portal, or program name in Methods / Acknowledgements |
-| Broader Influence (a.k.a. Influenced By) | Cites an awardee paper; program name in Acknowledgements, Title/Abstract, or body |
-
-Awardee > User > Broader Influence: a paper gets the highest category any query hits.
-Output is a workbook with `Data_Tabular` (all hits, one row per query hit), `Data_Matrixed_Query`
-(unique PMIDs x query, with `Final_Assignment`), and `Data_Matrixed_Cluster` (unique PMIDs x
-query cluster). iCite metadata is joined in.
-
-## Files
-
-| File | What it is |
-|---|---|
-| `PPST_Background, Inputs, Output Sheets Meaning.pptx` | Original deck (byte-exact copy from Drive) |
-| `PPST_Background_Inputs_Output_Sheets_Meaning.md` | Slide text dump of the deck |
-| `20250910_Publication_Database_Script_input-template.md` | Full text rendering of the input template: column glossary, Europe PMC field lookup, and the 4D Nucleome example query set |
-| `KidsFirst_Query_Summary.csv` | The 386 queries the Eval team ran for Kids First 1.0 (2015-2025), with the exact Europe PMC query string and hit counts per query |
-| `2026.04.24_PPST_KidsFirstoutput.txt` | Text rendering of the Kids First output workbook: Summary sheet plus a truncated `Data_Matrixed_Query`. `Data_Tabular` did not survive the rendering |
-| `20250910_Publication_Database_Script_input-template.xlsx` | Original input template (downloaded manually) |
-| `2026.04.24_PPST_KidsFirstoutput.xlsx` | Original Kids First output workbook (downloaded manually) |
-| `cfde_PPST_input_<date>.xlsx` | Generated PPST Script_Input workbook for CFDE (573 rows on 2026-09-11: 91 grants, 446 cites, 16 award-title terms after trimming, 16 curated, 4 DRC). Built by `cfde-atlas-etl`: `uv run python -m cfde_atlas_etl.pubsearch.build_input --program cfde`. Gitignored; regenerate. |
-| `cfde_PPST_output_<date>.xlsx` | Our PPST-shaped OUTPUT workbook for CFDE (Summary, Data_Tabular, Data_Matrixed_Query, Data_Matrixed_Cluster + evidence and run id), from `pubsearch.export_output --run-id <run>`. Gitignored. |
-| `cfde_pubsearch_summary_<date>.json` | Per-run summary JSON (tiers, clusters, by-year, journals, RCR) for the atlas report page, from `pubsearch.summary_json`. |
-| `DRAFT-reply-to-christy-2.md` | Reply answering her three questions; corrects the User tier from 171 to 8 after trimming junk title terms (local, untracked) |
-| `DESIGN-publication-search.md` | Design note: reproducing the PPST tiers from ecosystem metadata via the Europe PMC API |
-
-Pipeline work lives in `seandavi/cfde-atlas-etl` under `docs/pubsearch/SPEC.md` and issues #53-62 (milestone 1 done 2026-09-10).
-
-## Kids First 1.0 run at a glance (from the Summary sheet)
-
-Analyst Vanessa Barnes, run 2026-04-24, period 2015-2025.
-
-| Impact category | Query clusters | Unique PMIDs |
-|---|---|---|
-| Awardee | X01, R03, U24, U2C | 243 |
-| User | Data_Resource_Identifier, Cloud_Credit_Search_Term, Program_Name, dBGap_accession_number, Grant_Number | 217 |
-| Broader Influence | White_paper (7 PMIDs), Cites_Awardee_Paper (194 awardee papers, 4648 citing PMIDs) | not totalled in the Summary sheet |
-
-Awardee queries are grant numbers searched with the `*HL132363` wildcard form and a
-`FIRST_PDATE:[2015 TO 2025]` date clamp.
+The publication-search pipeline itself is unchanged and lives in `seandavi/cfde-atlas-etl`
+(`cfde_atlas_etl.pubsearch`).
